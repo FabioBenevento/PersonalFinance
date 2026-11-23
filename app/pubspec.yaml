@@ -41,6 +41,7 @@ dependencies:
   cloud_firestore: ^7.2.0
 
 dev_dependencies:
+  cloud_firestore_web: ^5.9.0
   firebase_auth_web: ^6.4.0
   firebase_core_web: ^4.2.0
   flutter_test:

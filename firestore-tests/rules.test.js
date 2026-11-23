@@ -1,5 +1,6 @@
 const { test, before, after, beforeEach } = require('node:test');
 const fs = require('node:fs');
+const assert = require('node:assert/strict');
 const {
   initializeTestEnvironment, assertFails, assertSucceeds,
 } = require('@firebase/rules-unit-testing');
@@ -20,6 +21,9 @@ beforeEach(async () => {
     await setDoc(doc(c.firestore(), 'allowlist/altro'), {});
     await setDoc(doc(c.firestore(), 'users/ok/voci/v1'), { nome: 'x' });
     await setDoc(doc(c.firestore(), 'users/altro/voci/v1'), { nome: 'y' });
+    for (const uid of ['ok', 'altro', 'intruso']) {
+      await setDoc(doc(c.firestore(), `users/${uid}/fotografie/2026-10`), { revisione: 1, voci: [] });
+    }
   });
 });
 
@@ -60,3 +64,30 @@ test('ACC-008 utente autorizzato solo sui propri dati', async () => {
   await assertSucceeds(setDoc(doc(d, 'users/ok/voci/v2'), { nome: 'n' }));
   await assertSucceeds(setDoc(doc(d, 'users/ok'), { inizializzato: true }));
 });
+
+const fotografia = { revisione: 1, voci: [] };
+const sostituzione = { revisione: 2, voci: [{ id: 'contanti', saldoCentesimi: 1200 }] };
+
+test('FOT-019 proprietario autorizzato legge, crea e sostituisce fotografie', async () => {
+  const d = db('ok');
+  await assertSucceeds(getDoc(doc(d, 'users/ok/fotografie/2026-10')));
+  const nuova = doc(d, 'users/ok/fotografie/2026-11');
+  await assertSucceeds(setDoc(nuova, fotografia));
+  await assertSucceeds(setDoc(nuova, sostituzione));
+  const salvata = await assertSucceeds(getDoc(nuova));
+  assert.deepEqual(salvata.data(), sostituzione);
+});
+
+for (const [caso, context, uid] of [
+  ['altro proprietario', () => db('ok'), 'altro'],
+  ['non autenticato', () => env.unauthenticatedContext().firestore(), 'ok'],
+  ['fuori allowlist', () => db('intruso'), 'intruso'],
+]) {
+  test(`FOT-019 ${caso}: lettura, creazione e sostituzione negate`, async () => {
+    const d = context();
+    const esistente = doc(d, `users/${uid}/fotografie/2026-10`);
+    await assertFails(getDoc(esistente));
+    await assertFails(setDoc(doc(d, `users/${uid}/fotografie/2026-11`), fotografia));
+    await assertFails(setDoc(esistente, sostituzione));
+  });
+}

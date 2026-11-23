@@ -58,7 +58,7 @@ packages:
     source: hosted
     version: "8.2.0"
   cloud_firestore_web:
-    dependency: transitive
+    dependency: "direct dev"
     description:
       name: cloud_firestore_web
       sha256: "090eb7641041527cbaa5caa66f674e189f98d745bca90174d06f3b1db83a70b2"
