@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'firebase_options.dart';
+import 'router.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -10,10 +11,12 @@ Future<void> main() async {
   runApp(const ProviderScope(child: PersonalFinanceApp()));
 }
 
-class PersonalFinanceApp extends StatelessWidget {
+class PersonalFinanceApp extends ConsumerWidget {
   const PersonalFinanceApp({super.key});
 
   @override
-  Widget build(BuildContext context) =>
-      const MaterialApp(title: 'PersonalFinance', home: Scaffold());
+  Widget build(BuildContext context, WidgetRef ref) => MaterialApp.router(
+    title: 'PersonalFinance',
+    routerConfig: ref.watch(routerProvider),
+  );
 }
