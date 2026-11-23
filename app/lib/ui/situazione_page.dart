@@ -7,12 +7,7 @@ import '../domain/importo.dart';
 import '../domain/situazione.dart';
 import '../domain/voce.dart';
 import 'dettaglio_page.dart';
-
-const _nomiGruppo = {
-  Gruppo.salvadanaio: 'Salvadanaio',
-  Gruppo.liquidita: 'Liquidità',
-  Gruppo.investimenti: 'Investimenti',
-};
+import 'gestione_voci.dart';
 
 class SituazionePage extends ConsumerWidget {
   const SituazionePage({super.key});
@@ -24,6 +19,11 @@ class SituazionePage extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('PersonalFinance'),
         actions: [
+          if (voci.value case final v?)
+            TextButton(
+              onPressed: () => aggiungiVoce(context, ref, v),
+              child: const Text('Aggiungi voce'),
+            ),
           TextButton(
             onPressed: ref.read(authGatewayProvider).signOut,
             child: const Text('Esci'),
@@ -51,7 +51,7 @@ class _Elenco extends StatelessWidget {
     children: [
       for (final g in Gruppo.values) ...[
         _Riepilogo(
-          nome: _nomiGruppo[g]!,
+          nome: nomiGruppo[g]!,
           saldo: situazione.totaleGruppo(g),
           percentuale: situazione.percentualeGruppo(g),
           grassetto: true,
@@ -199,6 +199,25 @@ class _VoceRowState extends ConsumerState<_VoceRow> {
           ),
           const SizedBox(width: 8),
           Text(widget.percentuale),
+          PopupMenuButton<String>(
+            tooltip: 'Azioni ${widget.voce.nome}',
+            onSelected: (azione) {
+              final voci = ref.read(vociProvider).value ?? const [];
+              switch (azione) {
+                case 'rinomina':
+                  rinominaVoce(context, ref, voci, widget.voce);
+                case 'sposta':
+                  spostaVoce(context, ref, voci, widget.voce);
+                case 'elimina':
+                  eliminaVoce(context, ref, widget.voce);
+              }
+            },
+            itemBuilder: (_) => const [
+              PopupMenuItem(value: 'rinomina', child: Text('Rinomina')),
+              PopupMenuItem(value: 'sposta', child: Text('Sposta')),
+              PopupMenuItem(value: 'elimina', child: Text('Elimina')),
+            ],
+          ),
         ],
       ),
     ),

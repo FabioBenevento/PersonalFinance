@@ -142,4 +142,64 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('€ 350,00  100,00%'), findsOneWidget);
   });
+
+  testWidgets('SIT-011 aggiunta di una voce', (tester) async {
+    final repo = await pump(tester);
+    await tester.tap(find.text('Aggiungi voce'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Nome'),
+      'Conto Arancio',
+    );
+    await tester.tap(find.widgetWithText(ChoiceChip, 'Liquidità'));
+    await tester.tap(find.widgetWithText(ChoiceChip, 'Semplice'));
+    await tester.tap(find.text('Aggiungi'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Conto Arancio'), findsOneWidget);
+    expect(
+      tester.getTopLeft(find.text('Conto Arancio')).dy,
+      greaterThan(tester.getTopLeft(find.text('BBVA')).dy),
+    );
+    expect(
+      tester.getTopLeft(find.text('Conto Arancio')).dy,
+      lessThan(tester.getTopLeft(find.text('Investimenti')).dy),
+    );
+    final voci = await repo.osserva().first;
+    expect(
+      voci.where((v) => v.nome == 'Conto Arancio').single.saldoCentesimi,
+      0,
+    );
+  });
+
+  testWidgets('SIT-014 eliminazione con conferma', (tester) async {
+    final repo = await pump(tester, [
+      const Voce.semplice(
+        id: 'n',
+        nome: 'N26',
+        gruppo: Gruppo.liquidita,
+        saldoCentesimi: 12345,
+      ),
+      ..._vociSemplici,
+    ]);
+    await tester.tap(find.byTooltip('Azioni N26'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Elimina'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('N26'), findsWidgets);
+    expect(find.textContaining('€ 123,45'), findsWidgets);
+
+    await tester.tap(find.text('Annulla'));
+    await tester.pumpAndSettle();
+    expect((await repo.osserva().first).length, 4);
+
+    await tester.tap(find.byTooltip('Azioni N26'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Elimina'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Conferma'));
+    await tester.pumpAndSettle();
+    expect(find.text('N26'), findsNothing);
+    expect((await repo.osserva().first).length, 3);
+  });
 }
