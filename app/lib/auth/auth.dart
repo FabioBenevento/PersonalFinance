@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 sealed class AuthState {
@@ -44,8 +45,9 @@ class FirebaseAuthGateway implements AuthGateway {
   }
 
   @override
-  Future<void> signInWithGoogle() =>
-      _auth.signInWithProvider(GoogleAuthProvider());
+  Future<void> signInWithGoogle() => kIsWeb
+      ? _auth.signInWithPopup(GoogleAuthProvider())
+      : _auth.signInWithProvider(GoogleAuthProvider());
 
   @override
   Future<void> signOut() => _auth.signOut();

@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -26,7 +27,18 @@ class AccessoPage extends ConsumerWidget {
             ],
           ),
           _ => FilledButton(
-            onPressed: gateway.signInWithGoogle,
+            onPressed: () async {
+              try {
+                await gateway.signInWithGoogle();
+              } on FirebaseAuthException catch (error) {
+                if (!context.mounted) return;
+                final message = error.code == 'popup-blocked'
+                    ? 'Consenti i popup del browser e riprova.'
+                    : 'Accesso con Google non riuscito. Riprova.';
+                ScaffoldMessenger.of(context)
+                    .showSnackBar(SnackBar(content: Text(message)));
+              }
+            },
             child: const Text('Accedi con Google'),
           ),
         },

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -10,8 +11,9 @@ import 'package:personal_finance/main.dart';
 import '../data/fake_voci_repository.dart';
 
 class FakeGateway implements AuthGateway {
-  FakeGateway({this.allowed = true});
+  FakeGateway({this.allowed = true, this.signInError});
   final bool allowed;
+  FirebaseAuthException? signInError;
   final _uid = StreamController<String?>.broadcast(sync: true);
   String? _current;
 
@@ -25,14 +27,21 @@ class FakeGateway implements AuthGateway {
   Future<bool> isAllowed(String uid) async => allowed;
 
   @override
-  Future<void> signInWithGoogle() async => _uid.add(_current = 'u1');
+  Future<void> signInWithGoogle() async {
+    if (signInError != null) throw signInError!;
+    _uid.add(_current = 'u1');
+  }
 
   @override
   Future<void> signOut() async => _uid.add(_current = null);
 }
 
-Future<FakeGateway> pump(WidgetTester tester, {bool allowed = true}) async {
-  final gateway = FakeGateway(allowed: allowed);
+Future<FakeGateway> pump(
+  WidgetTester tester, {
+  bool allowed = true,
+  FirebaseAuthException? signInError,
+}) async {
+  final gateway = FakeGateway(allowed: allowed, signInError: signInError);
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
@@ -47,6 +56,29 @@ Future<FakeGateway> pump(WidgetTester tester, {bool allowed = true}) async {
 }
 
 void main() {
+  testWidgets('ACC-002 popup bloccato: avviso e nuovo tentativo riuscito', (
+    tester,
+  ) async {
+    final gateway = await pump(
+      tester,
+      signInError: FirebaseAuthException(code: 'popup-blocked'),
+    );
+    await tester.tap(find.text('Accedi con Google'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Consenti i popup del browser e riprova.'),
+      findsOneWidget,
+    );
+    expect(find.byType(AppBar), findsNothing);
+    expect(tester.takeException(), isNull);
+
+    gateway.signInError = null;
+    await tester.tap(find.text('Accedi con Google'));
+    await tester.pumpAndSettle();
+    expect(find.byType(AppBar), findsOneWidget);
+    expect(find.text('Accedi con Google'), findsNothing);
+  });
+
   testWidgets('ACC-001 senza sessione si vede solo la pagina di accesso', (
     tester,
   ) async {
