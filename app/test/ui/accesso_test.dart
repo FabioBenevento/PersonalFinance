@@ -4,7 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personal_finance/auth/auth.dart';
+import 'package:personal_finance/data/voci_providers.dart';
 import 'package:personal_finance/main.dart';
+
+import '../data/fake_voci_repository.dart';
 
 class FakeGateway implements AuthGateway {
   FakeGateway({this.allowed = true});
@@ -32,7 +35,10 @@ Future<FakeGateway> pump(WidgetTester tester, {bool allowed = true}) async {
   final gateway = FakeGateway(allowed: allowed);
   await tester.pumpWidget(
     ProviderScope(
-      overrides: [authGatewayProvider.overrideWithValue(gateway)],
+      overrides: [
+        authGatewayProvider.overrideWithValue(gateway),
+        vociRepositoryProvider.overrideWithValue(FakeVociRepository()),
+      ],
       child: const PersonalFinanceApp(),
     ),
   );

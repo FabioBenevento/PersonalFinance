@@ -55,6 +55,7 @@ Future<void> scrivi(WidgetTester tester, String testo) async {
 }
 
 void main() {
+  inizializzazioneTests();
   testWidgets('SIT-001 gruppi sempre visibili e in ordine', (tester) async {
     await pump(tester);
     final y = [
@@ -235,4 +236,37 @@ void main() {
     ];
     expect(tagliati, isEmpty);
   });
+}
+
+void inizializzazioneTests() {
+  testWidgets(
+    'SIT-022 primo accesso: 24 voci a zero, indicatore durante il caricamento',
+    (tester) async {
+      final repo = await pump(tester, const []);
+      expect(find.text('Contanti'), findsOneWidget);
+      expect((await repo.osserva().first).length, 24);
+    },
+  );
+
+  testWidgets(
+    'SIT-023 secondo accesso dopo aver eliminato tutto: nessuna voce ricreata',
+    (tester) async {
+      final repo = await pump(tester, const []);
+      for (final v in await repo.osserva().first) {
+        await repo.elimina(v.id);
+      }
+      await tester.pumpWidget(const SizedBox());
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authGatewayProvider.overrideWithValue(_Gateway()),
+            vociRepositoryProvider.overrideWithValue(repo),
+          ],
+          child: const PersonalFinanceApp(),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(await repo.osserva().first, isEmpty);
+    },
+  );
 }

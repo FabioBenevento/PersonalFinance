@@ -5,7 +5,8 @@ import 'package:personal_finance/domain/voce.dart';
 
 /// In-memory [VociRepository]; set [errore] to make writes fail.
 class FakeVociRepository implements VociRepository {
-  FakeVociRepository([List<Voce> voci = const []]) {
+  FakeVociRepository([List<Voce> voci = const []])
+    : _inizializzato = voci.isNotEmpty {
     for (final v in voci) {
       _voci.add(v);
     }
@@ -13,7 +14,7 @@ class FakeVociRepository implements VociRepository {
 
   final _voci = <Voce>[];
   final _changes = StreamController<void>.broadcast();
-  bool _inizializzato = false;
+  bool _inizializzato;
   Object? errore;
 
   List<Voce> get _ordinate => [
