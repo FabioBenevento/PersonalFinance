@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import 'auth/auth.dart';
 import 'ui/accesso_page.dart';
+import 'ui/situazione_page.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final refresh = ValueNotifier(0);
@@ -19,7 +20,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       return onAccesso ? '/' : null;
     },
     routes: [
-      GoRoute(path: '/', builder: (_, _) => const HomePage()),
+      GoRoute(path: '/', builder: (_, _) => const SituazionePage()),
       GoRoute(path: '/accesso', builder: (_, _) => const AccessoPage()),
     ],
   );

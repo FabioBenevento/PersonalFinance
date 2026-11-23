@@ -34,21 +34,3 @@ class AccessoPage extends ConsumerWidget {
     );
   }
 }
-
-/// Placeholder for the protected area, replaced by the Situazione Patrimoniale page.
-class HomePage extends ConsumerWidget {
-  const HomePage({super.key});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) => Scaffold(
-    appBar: AppBar(
-      title: const Text('PersonalFinance'),
-      actions: [
-        TextButton(
-          onPressed: ref.read(authGatewayProvider).signOut,
-          child: const Text('Esci'),
-        ),
-      ],
-    ),
-  );
-}
