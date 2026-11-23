@@ -17,7 +17,11 @@ class SituazionePage extends ConsumerWidget {
     final voci = ref.watch(vociProvider);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('PersonalFinance'),
+        title: const FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text('PersonalFinance'),
+        ),
         actions: [
           if (voci.value case final v?)
             TextButton(

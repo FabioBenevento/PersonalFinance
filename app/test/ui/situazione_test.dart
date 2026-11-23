@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personal_finance/auth/auth.dart';
 import 'package:personal_finance/data/voci_providers.dart';
 import 'package:personal_finance/domain/voce.dart';
+import 'package:personal_finance/domain/voci_iniziali.dart';
 import 'package:personal_finance/main.dart';
 
 import '../data/fake_voci_repository.dart';
@@ -201,5 +203,36 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('N26'), findsNothing);
     expect((await repo.osserva().first).length, 3);
+  });
+
+  testWidgets('SIT-024 schermo stretto', (tester) async {
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await pump(tester, [
+      for (final v in vociIniziali)
+        v.conDettaglio
+            ? v
+            : Voce.semplice(
+                id: v.id,
+                nome: v.nome,
+                gruppo: v.gruppo,
+                saldoCentesimi: 123456789012,
+              ),
+    ]);
+
+    final righe = find.byType(ListView);
+    expect(tester.takeException(), isNull);
+    // Only vertical scrolling: no horizontal scrollable.
+    for (final e in righe.evaluate()) {
+      expect((e.widget as ListView).scrollDirection, Axis.vertical);
+    }
+    // No clipped text (ellipsis or wrapped beyond max lines).
+    final tagliati = [
+      for (final e in find.byType(RichText).evaluate())
+        if ((e.renderObject! as RenderParagraph).didExceedMaxLines)
+          (e.renderObject! as RenderParagraph).text.toPlainText(),
+    ];
+    expect(tagliati, isEmpty);
   });
 }
