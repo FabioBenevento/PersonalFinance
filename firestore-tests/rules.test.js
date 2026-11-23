@@ -17,6 +17,7 @@ beforeEach(async () => {
   await env.clearFirestore();
   await env.withSecurityRulesDisabled(async (c) => {
     await setDoc(doc(c.firestore(), 'allowlist/ok'), {});
+    await setDoc(doc(c.firestore(), 'allowlist/altro'), {});
     await setDoc(doc(c.firestore(), 'users/ok/voci/v1'), { nome: 'x' });
     await setDoc(doc(c.firestore(), 'users/altro/voci/v1'), { nome: 'y' });
   });
