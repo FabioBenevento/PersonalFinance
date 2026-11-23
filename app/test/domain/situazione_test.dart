@@ -62,6 +62,11 @@ void main() {
     ]);
     expect(s.percentualeVoce(a), '33,33%');
     expect(s.percentualeVoce(b), '12,50%');
+
+    // 1/800 = 0,125%: metà esatta, arrotondata per eccesso
+    final c = _v('c', Gruppo.investimenti, 1);
+    final s2 = Situazione([c, _v('c2', Gruppo.investimenti, 799)]);
+    expect(s2.percentualeVoce(c), '0,13%');
   });
 
   test('SIT-018 base zero', () {
