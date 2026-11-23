@@ -6,6 +6,7 @@ import '../data/voci_providers.dart';
 import '../domain/importo.dart';
 import '../domain/situazione.dart';
 import '../domain/voce.dart';
+import 'dettaglio_page.dart';
 
 const _nomiGruppo = {
   Gruppo.salvadanaio: 'Salvadanaio',
@@ -171,6 +172,13 @@ class _VoceRowState extends ConsumerState<_VoceRow> {
   @override
   Widget build(BuildContext context) => ListTile(
     title: Text(widget.voce.nome),
+    onTap: widget.voce.conDettaglio
+        ? () => Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => DettaglioPage(voceId: widget.voce.id),
+            ),
+          )
+        : null,
     trailing: SizedBox(
       width: 220,
       child: Row(

@@ -22,12 +22,17 @@ class _Gateway implements AuthGateway {
   Future<void> signOut() async {}
 }
 
-Future<FakeVociRepository> pump(WidgetTester tester) async {
-  final repo = FakeVociRepository([
-    const Voce.semplice(id: 'a', nome: 'BBVA', gruppo: Gruppo.liquidita),
-    const Voce.semplice(id: 'b', nome: 'Contanti', gruppo: Gruppo.salvadanaio),
-    const Voce.semplice(id: 'c', nome: 'ETF', gruppo: Gruppo.investimenti),
-  ]);
+const _vociSemplici = [
+  Voce.semplice(id: 'a', nome: 'BBVA', gruppo: Gruppo.liquidita),
+  Voce.semplice(id: 'b', nome: 'Contanti', gruppo: Gruppo.salvadanaio),
+  Voce.semplice(id: 'c', nome: 'ETF', gruppo: Gruppo.investimenti),
+];
+
+Future<FakeVociRepository> pump(
+  WidgetTester tester, [
+  List<Voce> voci = _vociSemplici,
+]) async {
+  final repo = FakeVociRepository(voci);
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
@@ -74,5 +79,67 @@ void main() {
     expect(find.text('Modifica non salvata, riprova'), findsOneWidget);
     expect(find.widgetWithText(TextField, '€ 10,00'), findsNothing);
     expect(find.widgetWithText(TextField, '€ 0,00'), findsNWidgets(3));
+  });
+
+  const p2p = Voce.conDettaglio(
+    id: 'p',
+    nome: 'P2PLanding',
+    gruppo: Gruppo.investimenti,
+    righe: [
+      Riga(id: 'r1', nome: 'Bondora', saldoCentesimi: 10000),
+      Riga(id: 'r2', nome: 'Evenfi', saldoCentesimi: 5000),
+      Riga(id: 'r3', nome: 'Recrowd', saldoCentesimi: 2500),
+    ],
+  );
+
+  testWidgets('SIT-008 saldo della voce con dettaglio non modificabile', (
+    tester,
+  ) async {
+    await pump(tester, [p2p]);
+    expect(find.byType(TextField), findsNothing);
+    await tester.tap(find.text('P2PLanding'));
+    await tester.pumpAndSettle();
+    expect(find.text('€ 175,00'), findsOneWidget);
+    expect(find.widgetWithText(TextField, '€ 175,00'), findsNothing);
+    expect(find.widgetWithText(TextField, '€ 100,00'), findsOneWidget);
+  });
+
+  testWidgets('SIT-009 gestione delle righe', (tester) async {
+    await pump(tester, [p2p]);
+    await tester.tap(find.text('P2PLanding'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Aggiungi riga'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.widgetWithText(TextField, 'Nome'), 'Mintos');
+    await tester.enterText(find.widgetWithText(TextField, 'Saldo'), '100');
+    await tester.tap(find.text('Aggiungi'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Rinomina Evenfi'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).last, 'Evenfi Lending');
+    await tester.tap(find.text('Salva'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.widgetWithText(TextField, '€ 100,00').first,
+      '200',
+    );
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Elimina Recrowd'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Mintos'), findsOneWidget);
+    expect(find.text('Evenfi Lending'), findsOneWidget);
+    expect(find.text('Evenfi'), findsNothing);
+    expect(find.text('Recrowd'), findsNothing);
+    expect(find.text('€ 350,00'), findsOneWidget);
+
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    expect(find.text('€ 350,00  100,00%'), findsOneWidget);
   });
 }
