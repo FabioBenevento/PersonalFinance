@@ -72,7 +72,18 @@ class FirebaseEmulatorHarness {
     }
   }
 
+  Future<void> impostaSaldoRemoto(String id, int saldoCentesimi) => _fixture(
+    'users/$uid/voci/$id?updateMask.fieldPaths=saldoCentesimi',
+    'PATCH',
+    {
+      'fields': {
+        'saldoCentesimi': {'integerValue': '$saldoCentesimi'},
+      },
+    },
+  );
+
   Future<void> close() async {
+    await _fixture('users/$uid/voci/b', 'DELETE');
     await _fixture('users/$uid/fotografie/2026-11', 'DELETE');
     await _fixture('allowlist/$uid', 'DELETE');
     await auth.currentUser?.delete();
