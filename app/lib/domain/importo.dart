@@ -1,13 +1,18 @@
 /// Importi in centesimi (int): lettura e scrittura in formato italiano.
 const messaggioImportoNonValido = 'Importo non valido';
 
+final _euro = RegExp(r'^€\s*');
+
 final _importo = RegExp(
   r'^(?:(\d{1,3}(?:\.\d{3})+|\d+)(?:,(\d{1,2}))?|(\d+)\.(\d{1,2}))$',
 );
 
 /// Centesimi, oppure null se [testo] non è un importo valido.
+///
+/// Accetta un prefisso facoltativo `€` seguito da spazi facoltativi, così il
+/// testo prodotto da [scriviImporto] si rilegge sempre.
 int? leggiImporto(String testo) {
-  final m = _importo.firstMatch(testo.trim());
+  final m = _importo.firstMatch(testo.trim().replaceFirst(_euro, ''));
   if (m == null) return null;
   final intero = (m[1] ?? m[3])!.replaceAll('.', '');
   final decimali = (m[2] ?? m[4] ?? '').padRight(2, '0');

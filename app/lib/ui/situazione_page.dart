@@ -24,9 +24,9 @@ class SituazionePage extends ConsumerWidget {
           child: Text('PersonalFinance'),
         ),
         actions: [
-          if (voci.value case final v?)
+          if (voci.hasValue)
             TextButton(
-              onPressed: () => aggiungiVoce(context, ref, v),
+              onPressed: () => aggiungiVoce(context, ref),
               child: const Text('Aggiungi voce'),
             ),
           TextButton(
@@ -156,7 +156,6 @@ class _VoceRow extends ConsumerWidget {
                 onSalva: (c) => modificaVoce(
                   context,
                   ref,
-                  ref.read(vociProvider).value ?? const [],
                   voce.id,
                   (s) => s.modificaSaldoVoce(voce.id, c),
                 ),
@@ -166,12 +165,11 @@ class _VoceRow extends ConsumerWidget {
             PopupMenuButton<String>(
               tooltip: 'Azioni ${voce.nome}',
               onSelected: (azione) {
-                final voci = ref.read(vociProvider).value ?? const [];
                 switch (azione) {
                   case 'rinomina':
-                    rinominaVoce(context, ref, voci, voce);
+                    rinominaVoce(context, ref, voce);
                   case 'sposta':
-                    spostaVoce(context, ref, voci, voce);
+                    spostaVoce(context, ref, voce);
                   case 'elimina':
                     eliminaVoce(context, ref, voce);
                 }

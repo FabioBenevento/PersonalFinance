@@ -42,7 +42,7 @@ class DettaglioPage extends ConsumerWidget {
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _aggiungi(context, ref, caricate),
+        onPressed: () => _aggiungi(context, ref),
         label: const Text('Aggiungi riga'),
         icon: const Icon(Icons.add),
       ),
@@ -67,15 +67,13 @@ class DettaglioPage extends ConsumerWidget {
               onSaldo: (c) => modificaVoce(
                 context,
                 ref,
-                caricate,
                 voceId,
                 (s) => s.modificaSaldoRiga(voceId, r.id, c),
               ),
-              onRinomina: () => _rinomina(context, ref, caricate, r),
+              onRinomina: () => _rinomina(context, ref, r),
               onElimina: () => modificaVoce(
                 context,
                 ref,
-                caricate,
                 voceId,
                 (s) => s.eliminaRiga(voceId, r.id),
               ),
@@ -85,11 +83,7 @@ class DettaglioPage extends ConsumerWidget {
     );
   }
 
-  Future<void> _aggiungi(
-    BuildContext context,
-    WidgetRef ref,
-    List<Voce> voci,
-  ) async {
+  Future<void> _aggiungi(BuildContext context, WidgetRef ref) async {
     final dati = await showDialog<({String nome, String saldo})>(
       context: context,
       builder: (_) => const _NuovaRigaDialog(),
@@ -106,7 +100,6 @@ class DettaglioPage extends ConsumerWidget {
     await modificaVoce(
       context,
       ref,
-      voci,
       voceId,
       (s) => s.aggiungiRiga(
         voceId,
@@ -115,18 +108,12 @@ class DettaglioPage extends ConsumerWidget {
     );
   }
 
-  Future<void> _rinomina(
-    BuildContext context,
-    WidgetRef ref,
-    List<Voce> voci,
-    Riga riga,
-  ) async {
+  Future<void> _rinomina(BuildContext context, WidgetRef ref, Riga riga) async {
     final nome = await chiediNome(context, 'Rinomina riga', riga.nome);
     if (nome == null || !context.mounted) return;
     await modificaVoce(
       context,
       ref,
-      voci,
       voceId,
       (s) => s.rinominaRiga(voceId, riga.id, nome),
     );

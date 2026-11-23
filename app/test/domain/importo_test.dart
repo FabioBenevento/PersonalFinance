@@ -14,6 +14,15 @@ void main() {
     casi.forEach((s, c) => expect(leggiImporto(s), c, reason: s));
   });
 
+  test('SIT-002 il testo scritto da scriviImporto si rilegge', () {
+    for (final c in [0, 5, 40, 123456, 5011000, 123456780]) {
+      expect(leggiImporto(scriviImporto(c)), c);
+    }
+    expect(leggiImporto('€ 5'), 500);
+    expect(leggiImporto('€5'), 500);
+    expect(leggiImporto('€ 1.234,56'), 123456);
+  });
+
   test('SIT-003 importi non validi', () {
     for (final s in ['', 'abc', '-5', '12,345', '1,2,3', '1.23.4']) {
       expect(leggiImporto(s), isNull, reason: s);

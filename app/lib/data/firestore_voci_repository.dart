@@ -43,21 +43,19 @@ class FirestoreVociRepository implements VociRepository {
 
   @override
   Future<void> salva(Voce voce) async {
-    final esistente = await _voci.doc(voce.id).get();
-    int ordine;
-    if (esistente.exists && esistente['gruppo'] == voce.gruppo.name) {
-      ordine = esistente['ordine'] as int;
-    } else {
-      final gruppo = await _voci
-          .where('gruppo', isEqualTo: voce.gruppo.name)
-          .get();
-      ordine =
-          gruppo.docs.fold<int>(
-            -1,
-            (m, d) => (d['ordine'] as int) > m ? d['ordine'] as int : m,
-          ) +
-          1;
-    }
+    // Solo cache: funziona senza rete, ed è completa perché osserva() ascolta
+    // tutta la collezione.
+    final gruppo = await _voci
+        .where('gruppo', isEqualTo: voce.gruppo.name)
+        .get(const GetOptions(source: Source.cache));
+    final propria = gruppo.docs.where((d) => d.id == voce.id).firstOrNull;
+    final ordine = propria != null
+        ? propria['ordine'] as int
+        : gruppo.docs.fold<int>(
+                -1,
+                (m, d) => (d['ordine'] as int) > m ? d['ordine'] as int : m,
+              ) +
+              1;
     await _voci.doc(voce.id).set(voceToMap(voce, ordine));
   }
 

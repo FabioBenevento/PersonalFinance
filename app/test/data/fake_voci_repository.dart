@@ -16,6 +16,9 @@ class FakeVociRepository implements VociRepository {
   final _changes = StreamController<void>.broadcast();
   bool _inizializzato;
   Object? errore;
+
+  /// Called with every voce passed to [salva].
+  void Function(Voce)? suSalva;
   final _inAttesa = StreamController<Set<String>>.broadcast();
   Set<String> _attesa = {};
   var _contatore = 0;
@@ -55,6 +58,7 @@ class FakeVociRepository implements VociRepository {
 
   @override
   Future<void> salva(Voce voce) async => _scrivi(() {
+    suSalva?.call(voce);
     final i = _voci.indexWhere((v) => v.id == voce.id);
     if (i >= 0 && _voci[i].gruppo == voce.gruppo) {
       _voci[i] = voce;

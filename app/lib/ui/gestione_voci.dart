@@ -27,18 +27,22 @@ Future<void> esegui(BuildContext context, Future<void> Function() f) async {
   }
 }
 
-/// Applies [f] to the situazione and saves the voce [voceId] it changed.
+/// Applies [f] to the current situazione and saves the voce [voceId] it
+/// changed. The state is read when applied, never taken from the caller, so
+/// close edits do not restore stale values.
 Future<void> modificaVoce(
   BuildContext context,
   WidgetRef ref,
-  List<Voce> voci,
   String voceId,
   Situazione Function(Situazione) f,
 ) => esegui(
   context,
   () => ref
       .read(vociRepositoryProvider)
-      .salva(f(Situazione(voci)).voci.firstWhere((v) => v.id == voceId)),
+      .salva(
+        f(Situazione(ref.read(vociProvider).value ?? const [])).voci
+            .firstWhere((v) => v.id == voceId),
+      ),
 );
 
 /// Asks for a name; null if cancelled.
@@ -87,11 +91,7 @@ class _NomeDialogState extends State<_NomeDialog> {
   );
 }
 
-Future<void> aggiungiVoce(
-  BuildContext context,
-  WidgetRef ref,
-  List<Voce> voci,
-) async {
+Future<void> aggiungiVoce(BuildContext context, WidgetRef ref) async {
   final nuova =
       await showDialog<({String nome, Gruppo gruppo, bool dettaglio})>(
         context: context,
@@ -102,7 +102,7 @@ Future<void> aggiungiVoce(
   final voce = nuova.dettaglio
       ? Voce.conDettaglio(id: id, nome: nuova.nome, gruppo: nuova.gruppo)
       : Voce.semplice(id: id, nome: nuova.nome, gruppo: nuova.gruppo);
-  await modificaVoce(context, ref, voci, id, (s) => s.aggiungiVoce(voce));
+  await modificaVoce(context, ref, id, (s) => s.aggiungiVoce(voce));
 }
 
 class _NuovaVoceDialog extends StatefulWidget {
@@ -181,7 +181,6 @@ class _NuovaVoceDialogState extends State<_NuovaVoceDialog> {
 Future<void> rinominaVoce(
   BuildContext context,
   WidgetRef ref,
-  List<Voce> voci,
   Voce voce,
 ) async {
   final nome = await chiediNome(context, 'Rinomina voce', voce.nome);
@@ -189,18 +188,12 @@ Future<void> rinominaVoce(
   await modificaVoce(
     context,
     ref,
-    voci,
     voce.id,
     (s) => s.rinominaVoce(voce.id, nome),
   );
 }
 
-Future<void> spostaVoce(
-  BuildContext context,
-  WidgetRef ref,
-  List<Voce> voci,
-  Voce voce,
-) async {
+Future<void> spostaVoce(BuildContext context, WidgetRef ref, Voce voce) async {
   final gruppo = await showDialog<Gruppo>(
     context: context,
     builder: (_) => SimpleDialog(
@@ -219,7 +212,6 @@ Future<void> spostaVoce(
   await modificaVoce(
     context,
     ref,
-    voci,
     voce.id,
     (s) => s.spostaVoce(voce.id, gruppo),
   );

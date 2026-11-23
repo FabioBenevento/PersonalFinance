@@ -76,6 +76,30 @@ void main() {
     expect(find.text('€ 4.276,69'), findsNWidgets(2));
   });
 
+  testWidgets(
+    'SIT-003 uscire dal campo senza modificarlo non salva né segnala',
+    (tester) async {
+      final repo = await pump(tester);
+      final salvataggi = <Voce>[];
+      repo.suSalva = salvataggi.add;
+      await tester.tap(find.widgetWithText(TextField, '€ 0,00').at(1));
+      await tester.pump();
+      FocusManager.instance.primaryFocus?.unfocus();
+      await tester.pumpAndSettle();
+      expect(find.text('Importo non valido'), findsNothing);
+      expect(salvataggi, isEmpty);
+    },
+  );
+
+  testWidgets('SIT-005 cambiando solo le cifre il simbolo € è accettato', (
+    tester,
+  ) async {
+    await pump(tester);
+    await scrivi(tester, '€ 12,50');
+    expect(find.text('Importo non valido'), findsNothing);
+    expect(find.widgetWithText(TextField, '€ 12,50'), findsOneWidget);
+  });
+
   testWidgets('SIT-021 salvataggio non riuscito', (tester) async {
     final repo = await pump(tester);
     repo.errore = FirebaseException(
@@ -93,12 +117,15 @@ void main() {
   ) async {
     final repo = await pump(tester);
     expect(find.text('In attesa di sincronizzazione'), findsNothing);
-    repo.impostaInAttesa({'b'});
+    await scrivi(tester, '4.276,69');
+    repo.impostaInAttesa({'a'});
     await tester.pumpAndSettle();
+    expect(find.widgetWithText(TextField, '€ 4.276,69'), findsOneWidget);
     expect(find.text('In attesa di sincronizzazione'), findsOneWidget);
     repo.impostaInAttesa({});
     await tester.pumpAndSettle();
     expect(find.text('In attesa di sincronizzazione'), findsNothing);
+    expect(find.widgetWithText(TextField, '€ 4.276,69'), findsOneWidget);
   });
 
   const p2p = Voce.conDettaglio(
@@ -161,6 +188,29 @@ void main() {
     await tester.pageBack();
     await tester.pumpAndSettle();
     expect(find.text('€ 350,00  100,00%'), findsOneWidget);
+  });
+
+  testWidgets('modifiche ravvicinate nel dettaglio non ripristinano il saldo', (
+    tester,
+  ) async {
+    await pump(tester, [p2p]);
+    await tester.tap(find.text('P2PLanding'));
+    await tester.pumpAndSettle();
+
+    // Il tocco su "Aggiungi riga" toglie il fuoco al campo e lo salva.
+    await tester.enterText(
+      find.widgetWithText(TextField, '€ 100,00').first,
+      '200',
+    );
+    await tester.tap(find.text('Aggiungi riga'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.widgetWithText(TextField, 'Nome'), 'Mintos');
+    await tester.tap(find.text('Aggiungi'));
+    await tester.pumpAndSettle();
+
+    expect(find.widgetWithText(TextField, '€ 200,00'), findsOneWidget);
+    expect(find.text('Mintos'), findsOneWidget);
+    expect(find.text('€ 275,00'), findsOneWidget);
   });
 
   testWidgets('SIT-011 aggiunta di una voce', (tester) async {
