@@ -6,6 +6,7 @@ Voce _v(String n, Gruppo g, int c) =>
     Voce.semplice(id: n, nome: n, gruppo: g, saldoCentesimi: c);
 
 void main() {
+  _operazioni();
   test('SIT-006 saldo come somma delle righe', () {
     const v = Voce.conDettaglio(
       id: 'm',
@@ -74,5 +75,84 @@ void main() {
     final s = Situazione([a]);
     expect(s.percentualeVoce(a), '—');
     expect(s.percentualeGruppo(Gruppo.salvadanaio), '—');
+  });
+}
+
+void _operazioni() {
+  Situazione base() => Situazione([
+    _v('BBVA', Gruppo.liquidita, 0),
+    _v('Fideuram', Gruppo.liquidita, 10000),
+    _v('ETF', Gruppo.investimenti, 5000),
+  ]);
+  Situazione conRighe() => const Situazione([
+    Voce.conDettaglio(
+      id: 'm',
+      nome: 'M',
+      gruppo: Gruppo.salvadanaio,
+      righe: [Riga(id: '1', nome: 'Bwin', saldoCentesimi: 100)],
+    ),
+  ]);
+  Matcher rifiuta() => throwsA(isA<ValidazioneException>());
+
+  test('SIT-012 nome di voce non valido', () {
+    final s = base();
+    expect(() => s.aggiungiVoce(_v('', Gruppo.liquidita, 0)), rifiuta());
+    expect(() => s.aggiungiVoce(_v('   ', Gruppo.liquidita, 0)), rifiuta());
+    expect(
+      () => s.aggiungiVoce(_v(' bbva ', Gruppo.investimenti, 0)),
+      rifiuta(),
+    );
+    expect(() => s.rinominaVoce('Fideuram', ' bbva '), rifiuta());
+    expect(() => s.rinominaVoce('Fideuram', ' '), rifiuta());
+    expect(s.voci.map((v) => v.nome), ['BBVA', 'Fideuram', 'ETF']);
+  });
+
+  test('SIT-012 aggiunta in fondo al gruppo e rinomina', () {
+    final s = base().aggiungiVoce(_v(' Conto Arancio ', Gruppo.liquidita, 0));
+    expect(s.voci.map((v) => v.nome), [
+      'BBVA',
+      'Fideuram',
+      'Conto Arancio',
+      'ETF',
+    ]);
+    expect(s.rinominaVoce('BBVA', 'bbva').voci.first.nome, 'bbva');
+  });
+
+  test('SIT-013 spostamento in un altro gruppo', () {
+    final s = base();
+    final r = s.spostaVoce('Fideuram', Gruppo.investimenti);
+    expect(r.totaleGruppo(Gruppo.liquidita), 0);
+    expect(r.totaleGruppo(Gruppo.investimenti), 15000);
+    expect(r.voci.last.nome, 'Fideuram');
+    expect(r.totale, s.totale);
+  });
+
+  test('SIT-010 nomi delle righe validi', () {
+    final s = conRighe();
+    const r = Riga(id: '2', nome: 'Snai');
+    expect(
+      () => s.aggiungiRiga('m', const Riga(id: '2', nome: ' ')),
+      rifiuta(),
+    );
+    expect(
+      () => s.aggiungiRiga('m', const Riga(id: '2', nome: 'BWIN')),
+      rifiuta(),
+    );
+    expect(() => s.rinominaRiga('m', '1', ''), rifiuta());
+    final t = s.aggiungiRiga('m', r);
+    expect(() => t.rinominaRiga('m', '2', ' bwin'), rifiuta());
+    expect(
+      t.rinominaRiga('m', '2', 'Skybet').voci.single.righe!.last.nome,
+      'Skybet',
+    );
+  });
+
+  test('SIT-010 modifica ed eliminazione delle righe', () {
+    final s = conRighe().aggiungiRiga('m', const Riga(id: '2', nome: 'Snai'));
+    final m = s.modificaSaldoRiga('m', '2', 40);
+    expect(m.voci.single.saldoCentesimi, 140);
+    final e = m.eliminaRiga('m', '1');
+    expect(e.voci.single.saldoCentesimi, 40);
+    expect(e.voci.single.righe!.length, 1);
   });
 }

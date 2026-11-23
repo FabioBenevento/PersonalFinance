@@ -1,11 +1,27 @@
 enum Gruppo { salvadanaio, liquidita, investimenti }
 
+/// Operazione rifiutata; [message] dice il motivo.
+class ValidazioneException implements Exception {
+  const ValidazioneException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => message;
+}
+
 class Riga {
   const Riga({required this.id, required this.nome, this.saldoCentesimi = 0});
 
   final String id;
   final String nome;
   final int saldoCentesimi;
+
+  Riga copyWith({String? nome, int? saldoCentesimi}) => Riga(
+    id: id,
+    nome: nome ?? this.nome,
+    saldoCentesimi: saldoCentesimi ?? this.saldoCentesimi,
+  );
 }
 
 /// Voce semplice (saldo inserito) o con dettaglio (saldo = somma delle righe).
@@ -32,6 +48,21 @@ class Voce {
 
   /// Null per le voci semplici.
   final List<Riga>? righe;
+
+  Voce copyWith({String? nome, Gruppo? gruppo, List<Riga>? righe}) =>
+      conDettaglio
+      ? Voce.conDettaglio(
+          id: id,
+          nome: nome ?? this.nome,
+          gruppo: gruppo ?? this.gruppo,
+          righe: righe ?? this.righe!,
+        )
+      : Voce.semplice(
+          id: id,
+          nome: nome ?? this.nome,
+          gruppo: gruppo ?? this.gruppo,
+          saldoCentesimi: _saldo,
+        );
 
   bool get conDettaglio => righe != null;
 
