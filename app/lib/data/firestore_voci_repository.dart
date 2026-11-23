@@ -52,9 +52,11 @@ class FirestoreVociRepository implements VociRepository {
   Future<void> elimina(String id) => _voci.doc(id).delete();
 
   @override
-  Future<bool> inizializzaSeNecessario(List<Voce> iniziali) async {
-    final marca = await _utente.get();
-    if (marca.data()?['inizializzato'] == true) return false;
+  Future<bool> inizializzato() async =>
+      (await _utente.get()).data()?['inizializzato'] == true;
+
+  @override
+  Future<void> scriviIniziali(List<Voce> iniziali) async {
     final batch = _db.batch();
     final ordini = <Gruppo, int>{};
     for (final v in iniziali) {
@@ -63,6 +65,5 @@ class FirestoreVociRepository implements VociRepository {
     }
     batch.set(_utente, {'inizializzato': true});
     await batch.commit();
-    return true;
   }
 }

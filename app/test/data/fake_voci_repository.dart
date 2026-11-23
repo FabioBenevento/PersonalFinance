@@ -50,12 +50,11 @@ class FakeVociRepository implements VociRepository {
       _scrivi(() => _voci.removeWhere((v) => v.id == id));
 
   @override
-  Future<bool> inizializzaSeNecessario(List<Voce> iniziali) async {
-    if (_inizializzato) return false;
-    _scrivi(() {
-      _voci.addAll(iniziali);
-      _inizializzato = true;
-    });
-    return true;
-  }
+  Future<bool> inizializzato() async => _inizializzato;
+
+  @override
+  Future<void> scriviIniziali(List<Voce> iniziali) async => _scrivi(() {
+    _voci.addAll(iniziali);
+    _inizializzato = true;
+  });
 }

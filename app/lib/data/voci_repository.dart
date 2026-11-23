@@ -10,7 +10,9 @@ abstract class VociRepository {
 
   Future<void> elimina(String id);
 
-  /// Writes [iniziali] atomically, only if the user has never been initialized.
-  /// Returns whether it wrote.
-  Future<bool> inizializzaSeNecessario(List<Voce> iniziali);
+  /// Whether the user's initial load was already done.
+  Future<bool> inizializzato();
+
+  /// Atomically writes [iniziali] and sets the initialized flag.
+  Future<void> scriviIniziali(List<Voce> iniziali);
 }

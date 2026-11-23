@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:personal_finance/data/inizializzazione_service.dart';
 import 'package:personal_finance/domain/voce.dart';
 
 import 'fake_voci_repository.dart';
@@ -11,7 +12,8 @@ const _iniziali = [
 void main() {
   test('SIT-022 primo accesso carica le voci iniziali', () async {
     final repo = FakeVociRepository();
-    expect(await repo.inizializzaSeNecessario(_iniziali), isTrue);
+    final service = InizializzazioneService(repo);
+    expect(await service.inizializzaSeNecessario(_iniziali), isTrue);
     expect((await repo.osserva().first).map((v) => v.id), ['v0', 'v1']);
   });
 
@@ -19,10 +21,11 @@ void main() {
     'SIT-023 nessun nuovo caricamento, anche dopo aver eliminato tutto',
     () async {
       final repo = FakeVociRepository();
-      await repo.inizializzaSeNecessario(_iniziali);
+      final service = InizializzazioneService(repo);
+      await service.inizializzaSeNecessario(_iniziali);
       await repo.elimina('v0');
       await repo.elimina('v1');
-      expect(await repo.inizializzaSeNecessario(_iniziali), isFalse);
+      expect(await service.inizializzaSeNecessario(_iniziali), isFalse);
       expect(await repo.osserva().first, isEmpty);
     },
   );
