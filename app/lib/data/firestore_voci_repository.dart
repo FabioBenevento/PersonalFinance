@@ -29,6 +29,19 @@ class FirestoreVociRepository implements VociRepository {
   });
 
   @override
+  Stream<Set<String>> osservaInAttesa() => _voci
+      .snapshots(includeMetadataChanges: true)
+      .map(
+        (s) => {
+          for (final d in s.docs)
+            if (d.metadata.hasPendingWrites) d.id,
+        },
+      );
+
+  @override
+  String nuovoId() => _voci.doc().id;
+
+  @override
   Future<void> salva(Voce voce) async {
     final esistente = await _voci.doc(voce.id).get();
     int ordine;

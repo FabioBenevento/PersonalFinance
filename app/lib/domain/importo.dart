@@ -24,9 +24,7 @@ String _decimali(int centesimi) {
 
 String scriviImporto(int centesimi) => '€ ${_decimali(centesimi)}';
 
-/// Percentuale di [parte] su [base], arrotondata a metà per eccesso; "—" con base zero.
-String scriviPercentuale(int parte, int base) {
-  if (base == 0) return '—';
-  final centesimiDiPercento = (parte * 20000 + base) ~/ (2 * base);
-  return '${_decimali(centesimiDiPercento)}%';
-}
+/// Formatta una percentuale espressa in centesimi di punto percentuale
+/// (2500 = 25,00%); "—" se null (base zero).
+String scriviPercentuale(int? centesimiDiPercento) =>
+    centesimiDiPercento == null ? '—' : '${_decimali(centesimiDiPercento)}%';

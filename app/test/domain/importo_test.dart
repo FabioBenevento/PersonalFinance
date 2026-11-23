@@ -28,13 +28,12 @@ void main() {
   });
 
   test('SIT-017 arrotondamento delle percentuali', () {
-    expect(scriviPercentuale(100, 300), '33,33%');
-    expect(scriviPercentuale(100, 800), '12,50%');
-    expect(scriviPercentuale(100, 400), '25,00%');
+    expect(scriviPercentuale(3333), '33,33%');
+    expect(scriviPercentuale(1250), '12,50%');
+    expect(scriviPercentuale(2500), '25,00%');
   });
 
   test('SIT-018 base zero', () {
-    expect(scriviPercentuale(0, 0), '—');
-    expect(scriviPercentuale(100, 0), '—');
+    expect(scriviPercentuale(null), '—');
   });
 }

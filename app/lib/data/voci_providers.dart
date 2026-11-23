@@ -18,6 +18,11 @@ final vociProvider = StreamProvider<List<Voce>>(
   (ref) => ref.watch(vociRepositoryProvider).osserva(),
 );
 
+/// Ids of the voci waiting for the server to confirm a write.
+final vociInAttesaProvider = StreamProvider<Set<String>>(
+  (ref) => ref.watch(vociRepositoryProvider).osservaInAttesa(),
+);
+
 /// One-time initial load of the signed-in user's voci; the Situazione waits for it.
 final inizializzazioneProvider = FutureProvider<void>((ref) async {
   final service = InizializzazioneService(ref.watch(vociRepositoryProvider));

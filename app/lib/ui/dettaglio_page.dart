@@ -3,8 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/voci_providers.dart';
 import '../domain/importo.dart';
-import '../domain/situazione.dart';
 import '../domain/voce.dart';
+import 'gestione_voci.dart';
+import 'saldo_editor.dart';
+
+const testoInAttesa = 'In attesa di sincronizzazione';
 
 /// Righe di una voce con dettaglio; il saldo della voce è la somma delle righe.
 class DettaglioPage extends ConsumerWidget {
@@ -14,13 +17,32 @@ class DettaglioPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final voci = ref.watch(vociProvider).value ?? const <Voce>[];
-    final voce = voci.where((v) => v.id == voceId).firstOrNull;
-    if (voce == null) return const Scaffold();
+    final caricate = ref.watch(vociProvider).value;
+    if (caricate == null) {
+      return Scaffold(
+        appBar: AppBar(),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+    final voce = caricate.where((v) => v.id == voceId).firstOrNull;
+    if (voce == null) {
+      return Scaffold(
+        appBar: AppBar(),
+        body: const Center(child: Text('Voce non più disponibile')),
+      );
+    }
+    final inAttesa =
+        ref.watch(vociInAttesaProvider).value?.contains(voceId) ?? false;
     return Scaffold(
-      appBar: AppBar(title: Text(voce.nome)),
+      appBar: AppBar(
+        title: FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(voce.nome),
+        ),
+      ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _aggiungi(context, ref, voci),
+        onPressed: () => _aggiungi(context, ref, caricate),
         label: const Text('Aggiungi riga'),
         icon: const Icon(Icons.add),
       ),
@@ -32,6 +54,7 @@ class DettaglioPage extends ConsumerWidget {
               'Saldo',
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
+            subtitle: inAttesa ? const Text(testoInAttesa) : null,
             trailing: Text(
               scriviImporto(voce.saldoCentesimi),
               style: const TextStyle(fontWeight: FontWeight.bold),
@@ -41,17 +64,19 @@ class DettaglioPage extends ConsumerWidget {
             _RigaRow(
               key: ValueKey(r.id),
               riga: r,
-              onSaldo: (c) => _applica(
+              onSaldo: (c) => modificaVoce(
                 context,
                 ref,
-                voci,
+                caricate,
+                voceId,
                 (s) => s.modificaSaldoRiga(voceId, r.id, c),
               ),
-              onRinomina: () => _rinomina(context, ref, voci, r),
-              onElimina: () => _applica(
+              onRinomina: () => _rinomina(context, ref, caricate, r),
+              onElimina: () => modificaVoce(
                 context,
                 ref,
-                voci,
+                caricate,
+                voceId,
                 (s) => s.eliminaRiga(voceId, r.id),
               ),
             ),
@@ -60,83 +85,32 @@ class DettaglioPage extends ConsumerWidget {
     );
   }
 
-  /// Applies [f] to the situazione and saves the changed voce.
-  Future<void> _applica(
-    BuildContext context,
-    WidgetRef ref,
-    List<Voce> voci,
-    Situazione Function(Situazione) f,
-  ) async {
-    final messenger = ScaffoldMessenger.of(context);
-    try {
-      final nuova = f(Situazione(voci));
-      await ref
-          .read(vociRepositoryProvider)
-          .salva(nuova.voci.firstWhere((v) => v.id == voceId));
-    } on ValidazioneException catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(e.message)));
-    } catch (_) {
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Modifica non salvata, riprova')),
-      );
-    }
-  }
-
   Future<void> _aggiungi(
     BuildContext context,
     WidgetRef ref,
     List<Voce> voci,
   ) async {
-    final nome = TextEditingController();
-    final saldo = TextEditingController();
-    final ok = await showDialog<bool>(
+    final dati = await showDialog<({String nome, String saldo})>(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Nuova riga'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nome,
-              decoration: const InputDecoration(labelText: 'Nome'),
-            ),
-            TextField(
-              controller: saldo,
-              decoration: const InputDecoration(labelText: 'Saldo'),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Annulla'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Aggiungi'),
-          ),
-        ],
-      ),
+      builder: (_) => const _NuovaRigaDialog(),
     );
-    if (ok != true || !context.mounted) return;
-    final centesimi = saldo.text.trim().isEmpty ? 0 : leggiImporto(saldo.text);
+    if (dati == null || !context.mounted) return;
+    final centesimi = dati.saldo.trim().isEmpty ? 0 : leggiImporto(dati.saldo);
     if (centesimi == null) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text(messaggioImportoNonValido)));
       return;
     }
-    await _applica(
+    final id = ref.read(vociRepositoryProvider).nuovoId();
+    await modificaVoce(
       context,
       ref,
       voci,
+      voceId,
       (s) => s.aggiungiRiga(
         voceId,
-        Riga(
-          id: DateTime.now().microsecondsSinceEpoch.toString(),
-          nome: nome.text,
-          saldoCentesimi: centesimi,
-        ),
+        Riga(id: id, nome: dati.nome, saldoCentesimi: centesimi),
       ),
     );
   }
@@ -147,35 +121,67 @@ class DettaglioPage extends ConsumerWidget {
     List<Voce> voci,
     Riga riga,
   ) async {
-    final nome = TextEditingController(text: riga.nome);
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Rinomina riga'),
-        content: TextField(controller: nome, autofocus: true),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Annulla'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Salva'),
-          ),
-        ],
-      ),
-    );
-    if (ok != true || !context.mounted) return;
-    await _applica(
+    final nome = await chiediNome(context, 'Rinomina riga', riga.nome);
+    if (nome == null || !context.mounted) return;
+    await modificaVoce(
       context,
       ref,
       voci,
-      (s) => s.rinominaRiga(voceId, riga.id, nome.text),
+      voceId,
+      (s) => s.rinominaRiga(voceId, riga.id, nome),
     );
   }
 }
 
-class _RigaRow extends StatefulWidget {
+class _NuovaRigaDialog extends StatefulWidget {
+  const _NuovaRigaDialog();
+
+  @override
+  State<_NuovaRigaDialog> createState() => _NuovaRigaDialogState();
+}
+
+class _NuovaRigaDialogState extends State<_NuovaRigaDialog> {
+  final _nome = TextEditingController();
+  final _saldo = TextEditingController();
+
+  @override
+  void dispose() {
+    _nome.dispose();
+    _saldo.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: const Text('Nuova riga'),
+    content: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        TextField(
+          controller: _nome,
+          decoration: const InputDecoration(labelText: 'Nome'),
+        ),
+        TextField(
+          controller: _saldo,
+          decoration: const InputDecoration(labelText: 'Saldo'),
+        ),
+      ],
+    ),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.pop(context),
+        child: const Text('Annulla'),
+      ),
+      TextButton(
+        onPressed: () =>
+            Navigator.pop(context, (nome: _nome.text, saldo: _saldo.text)),
+        child: const Text('Aggiungi'),
+      ),
+    ],
+  );
+}
+
+class _RigaRow extends StatelessWidget {
   const _RigaRow({
     super.key,
     required this.riga,
@@ -190,76 +196,23 @@ class _RigaRow extends StatefulWidget {
   final VoidCallback onElimina;
 
   @override
-  State<_RigaRow> createState() => _RigaRowState();
-}
-
-class _RigaRowState extends State<_RigaRow> {
-  late final _controller = TextEditingController(text: _saldo);
-  final _focus = FocusNode();
-
-  String get _saldo => scriviImporto(widget.riga.saldoCentesimi);
-
-  @override
-  void initState() {
-    super.initState();
-    _focus.addListener(() {
-      if (!_focus.hasFocus) _salva();
-    });
-  }
-
-  @override
-  void didUpdateWidget(_RigaRow old) {
-    super.didUpdateWidget(old);
-    if (!_focus.hasFocus) _controller.text = _saldo;
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    _focus.dispose();
-    super.dispose();
-  }
-
-  Future<void> _salva() async {
-    final centesimi = leggiImporto(_controller.text);
-    if (centesimi == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text(messaggioImportoNonValido)));
-    } else if (centesimi != widget.riga.saldoCentesimi) {
-      await widget.onSaldo(centesimi);
-    }
-    if (mounted) _controller.text = _saldo;
-  }
-
-  @override
-  Widget build(BuildContext context) => ListTile(
-    title: Text(widget.riga.nome),
-    trailing: SizedBox(
-      width: 260,
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              controller: _controller,
-              focusNode: _focus,
-              textAlign: TextAlign.end,
-              onSubmitted: (_) => _salva(),
-              decoration: const InputDecoration.collapsed(hintText: ''),
-            ),
-          ),
-          IconButton(
-            tooltip: 'Rinomina ${widget.riga.nome}',
-            icon: const Icon(Icons.edit),
-            onPressed: widget.onRinomina,
-          ),
-          IconButton(
-            tooltip: 'Elimina ${widget.riga.nome}',
-            icon: const Icon(Icons.delete),
-            onPressed: widget.onElimina,
-          ),
-        ],
-      ),
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(left: 16),
+    child: Row(
+      children: [
+        Expanded(child: Text(riga.nome)),
+        SaldoEditor(saldoCentesimi: riga.saldoCentesimi, onSalva: onSaldo),
+        IconButton(
+          tooltip: 'Rinomina ${riga.nome}',
+          icon: const Icon(Icons.edit),
+          onPressed: onRinomina,
+        ),
+        IconButton(
+          tooltip: 'Elimina ${riga.nome}',
+          icon: const Icon(Icons.delete),
+          onPressed: onElimina,
+        ),
+      ],
     ),
   );
 }

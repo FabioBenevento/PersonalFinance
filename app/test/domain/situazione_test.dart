@@ -48,8 +48,8 @@ void main() {
       _v('y', Gruppo.investimenti, 120000),
     ]);
     expect(s.totale, 160000);
-    expect(s.percentualeVoce(bbva), '25,00%');
-    expect(s.percentualeGruppo(Gruppo.liquidita), '25,00%');
+    expect(s.percentualeVoce(bbva), 2500);
+    expect(s.percentualeGruppo(Gruppo.liquidita), 2500);
   });
 
   test('SIT-017 arrotondamento', () {
@@ -61,20 +61,20 @@ void main() {
       b,
       _v('b2', Gruppo.liquidita, 700),
     ]);
-    expect(s.percentualeVoce(a), '33,33%');
-    expect(s.percentualeVoce(b), '12,50%');
+    expect(s.percentualeVoce(a), 3333);
+    expect(s.percentualeVoce(b), 1250);
 
     // 1/800 = 0,125%: metà esatta, arrotondata per eccesso
     final c = _v('c', Gruppo.investimenti, 1);
     final s2 = Situazione([c, _v('c2', Gruppo.investimenti, 799)]);
-    expect(s2.percentualeVoce(c), '0,13%');
+    expect(s2.percentualeVoce(c), 13);
   });
 
   test('SIT-018 base zero', () {
     final a = _v('a', Gruppo.salvadanaio, 0);
     final s = Situazione([a]);
-    expect(s.percentualeVoce(a), '—');
-    expect(s.percentualeGruppo(Gruppo.salvadanaio), '—');
+    expect(s.percentualeVoce(a), isNull);
+    expect(s.percentualeGruppo(Gruppo.salvadanaio), isNull);
   });
 }
 
@@ -154,5 +154,11 @@ void _operazioni() {
     final e = m.eliminaRiga('m', '1');
     expect(e.voci.single.saldoCentesimi, 40);
     expect(e.voci.single.righe!.length, 1);
+  });
+
+  test('SIT-005 modifica del saldo di una voce semplice dal dominio', () {
+    final s = base().modificaSaldoVoce('BBVA', 4242);
+    expect(s.voci.firstWhere((v) => v.id == 'BBVA').saldoCentesimi, 4242);
+    expect(s.totale, 4242 + 10000 + 5000);
   });
 }

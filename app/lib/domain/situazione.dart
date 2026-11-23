@@ -1,6 +1,7 @@
-import 'importo.dart';
 import 'voce.dart';
 
+/// Insieme delle voci con totali, percentuali e operazioni validate; ogni
+/// operazione restituisce una nuova Situazione.
 class Situazione {
   const Situazione(this.voci);
 
@@ -13,11 +14,16 @@ class Situazione {
 
   int get totale => Gruppo.values.fold(0, (s, g) => s + totaleGruppo(g));
 
-  String percentualeVoce(Voce v) =>
-      scriviPercentuale(v.saldoCentesimi, totaleGruppo(v.gruppo));
+  /// Percentuale della voce sul totale del suo gruppo, in centesimi di punto
+  /// percentuale (2500 = 25,00%), arrotondata a metà per eccesso; null con base zero.
+  int? percentualeVoce(Voce v) =>
+      _percentuale(v.saldoCentesimi, totaleGruppo(v.gruppo));
 
-  String percentualeGruppo(Gruppo g) =>
-      scriviPercentuale(totaleGruppo(g), totale);
+  /// Percentuale del gruppo sul Totale (stesse convenzioni di [percentualeVoce]).
+  int? percentualeGruppo(Gruppo g) => _percentuale(totaleGruppo(g), totale);
+
+  static int? _percentuale(int parte, int base) =>
+      base == 0 ? null : (parte * 20000 + base) ~/ (2 * base);
 
   /// Aggiunge una voce in fondo al suo gruppo (l'ordine nella lista è l'ordine
   /// di visualizzazione).
@@ -77,6 +83,17 @@ class Situazione {
       ),
     );
   }
+
+  /// Imposta il saldo di una voce semplice.
+  Situazione modificaSaldoVoce(String id, int saldoCentesimi) => _mappaVoce(
+    id,
+    (v) => Voce.semplice(
+      id: v.id,
+      nome: v.nome,
+      gruppo: v.gruppo,
+      saldoCentesimi: saldoCentesimi,
+    ),
+  );
 
   Situazione modificaSaldoRiga(
     String voceId,

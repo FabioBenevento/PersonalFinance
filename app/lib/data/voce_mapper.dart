@@ -1,5 +1,6 @@
 import '../domain/voce.dart';
 
+/// Documento Firestore di [voce]; [ordine] è la posizione nel gruppo.
 Map<String, Object?> voceToMap(Voce voce, int ordine) => {
   'nome': voce.nome,
   'gruppo': voce.gruppo.name,
@@ -14,6 +15,7 @@ Map<String, Object?> voceToMap(Voce voce, int ordine) => {
     'saldoCentesimi': voce.saldoCentesimi,
 };
 
+/// Voce dal documento [data] con id [id]; inverso di [voceToMap].
 Voce voceFromMap(String id, Map<String, Object?> data) {
   final nome = data['nome'] as String;
   final gruppo = Gruppo.values.byName(data['gruppo'] as String);

@@ -1,3 +1,4 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -77,11 +78,27 @@ void main() {
 
   testWidgets('SIT-021 salvataggio non riuscito', (tester) async {
     final repo = await pump(tester);
-    repo.errore = Exception('offline');
+    repo.errore = FirebaseException(
+      plugin: 'cloud_firestore',
+      code: 'unavailable',
+    );
     await scrivi(tester, '10');
     expect(find.text('Modifica non salvata, riprova'), findsOneWidget);
     expect(find.widgetWithText(TextField, '€ 10,00'), findsNothing);
     expect(find.widgetWithText(TextField, '€ 0,00'), findsNWidgets(3));
+  });
+
+  testWidgets('SIT-025 modifica senza rete: in attesa di sincronizzazione', (
+    tester,
+  ) async {
+    final repo = await pump(tester);
+    expect(find.text('In attesa di sincronizzazione'), findsNothing);
+    repo.impostaInAttesa({'b'});
+    await tester.pumpAndSettle();
+    expect(find.text('In attesa di sincronizzazione'), findsOneWidget);
+    repo.impostaInAttesa({});
+    await tester.pumpAndSettle();
+    expect(find.text('In attesa di sincronizzazione'), findsNothing);
   });
 
   const p2p = Voce.conDettaglio(
@@ -235,6 +252,49 @@ void main() {
           (e.renderObject! as RenderParagraph).text.toPlainText(),
     ];
     expect(tagliati, isEmpty);
+  });
+
+  testWidgets('SIT-024 schermo stretto: pagina di dettaglio', (tester) async {
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await pump(tester, [
+      const Voce.conDettaglio(
+        id: 'p',
+        nome: 'Deposito Titoli – Scalable Capital',
+        gruppo: Gruppo.investimenti,
+        righe: [
+          Riga(
+            id: 'r1',
+            nome: 'Deposito Titoli – Scalable Capital',
+            saldoCentesimi: 123456789012,
+          ),
+        ],
+      ),
+    ]);
+    await tester.tap(find.text('Deposito Titoli – Scalable Capital'));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    final tagliati = [
+      for (final e in find.byType(RichText).evaluate())
+        if ((e.renderObject! as RenderParagraph).didExceedMaxLines)
+          (e.renderObject! as RenderParagraph).text.toPlainText(),
+    ];
+    expect(tagliati, isEmpty);
+  });
+
+  testWidgets('dettaglio di una voce eliminata: messaggio e indietro', (
+    tester,
+  ) async {
+    final repo = await pump(tester, [p2p]);
+    await tester.tap(find.text('P2PLanding'));
+    await tester.pumpAndSettle();
+    await repo.elimina('p');
+    await tester.pumpAndSettle();
+    expect(find.text('Voce non più disponibile'), findsOneWidget);
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    expect(find.text('Salvadanaio'), findsOneWidget);
   });
 }
 

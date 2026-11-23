@@ -13,6 +13,7 @@ import '../data/fake_voci_repository.dart';
 class FakeGateway implements AuthGateway {
   FakeGateway({this.allowed = true, this.signInError});
   final bool allowed;
+  Object? verificaErrore;
   FirebaseAuthException? signInError;
   final _uid = StreamController<String?>.broadcast(sync: true);
   String? _current;
@@ -24,7 +25,10 @@ class FakeGateway implements AuthGateway {
   }
 
   @override
-  Future<bool> isAllowed(String uid) async => allowed;
+  Future<bool> isAllowed(String uid) async {
+    if (verificaErrore != null) throw verificaErrore!;
+    return allowed;
+  }
 
   @override
   Future<void> signInWithGoogle() async {
@@ -40,8 +44,10 @@ Future<FakeGateway> pump(
   WidgetTester tester, {
   bool allowed = true,
   FirebaseAuthException? signInError,
+  Object? verificaErrore,
 }) async {
-  final gateway = FakeGateway(allowed: allowed, signInError: signInError);
+  final gateway = FakeGateway(allowed: allowed, signInError: signInError)
+    ..verificaErrore = verificaErrore;
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
@@ -94,6 +100,31 @@ void main() {
     expect(find.text('Accesso non consentito per questo account'), findsOne);
     expect(find.text('Esci'), findsOneWidget);
     expect(find.byType(AppBar), findsNothing);
+  });
+
+  testWidgets('ACC-010 verifica non riuscita: riprova senza dati', (
+    tester,
+  ) async {
+    final gateway = await pump(
+      tester,
+      verificaErrore: FirebaseException(
+        plugin: 'cloud_firestore',
+        code: 'unavailable',
+      ),
+    );
+    await tester.tap(find.text('Accedi con Google'));
+    await tester.pumpAndSettle();
+    expect(find.text('Impossibile verificare l\'accesso'), findsOneWidget);
+    expect(
+      find.text('Accesso non consentito per questo account'),
+      findsNothing,
+    );
+    expect(find.byType(AppBar), findsNothing);
+
+    gateway.verificaErrore = null;
+    await tester.tap(find.text('Riprova'));
+    await tester.pumpAndSettle();
+    expect(find.byType(AppBar), findsOneWidget);
   });
 
   testWidgets('ACC-009 uscita', (tester) async {

@@ -26,6 +26,18 @@ class AccessoPage extends ConsumerWidget {
               ),
             ],
           ),
+          VerificaFallita() => Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Impossibile verificare l\'accesso'),
+              const SizedBox(height: 16),
+              FilledButton(
+                onPressed: () => ref.invalidate(authStateProvider),
+                child: const Text('Riprova'),
+              ),
+              TextButton(onPressed: gateway.signOut, child: const Text('Esci')),
+            ],
+          ),
           _ => FilledButton(
             onPressed: () async {
               try {

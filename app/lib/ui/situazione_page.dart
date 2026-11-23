@@ -8,6 +8,7 @@ import '../domain/situazione.dart';
 import '../domain/voce.dart';
 import 'dettaglio_page.dart';
 import 'gestione_voci.dart';
+import 'saldo_editor.dart';
 
 class SituazionePage extends ConsumerWidget {
   const SituazionePage({super.key});
@@ -57,14 +58,14 @@ class _Elenco extends StatelessWidget {
         _Riepilogo(
           nome: nomiGruppo[g]!,
           saldo: situazione.totaleGruppo(g),
-          percentuale: situazione.percentualeGruppo(g),
+          percentuale: scriviPercentuale(situazione.percentualeGruppo(g)),
           grassetto: true,
         ),
         for (final v in situazione.voci.where((v) => v.gruppo == g))
           _VoceRow(
             key: ValueKey(v.id),
             voce: v,
-            percentuale: situazione.percentualeVoce(v),
+            percentuale: scriviPercentuale(situazione.percentualeVoce(v)),
           ),
       ],
       _Riepilogo(
@@ -106,124 +107,84 @@ class _Riepilogo extends StatelessWidget {
   }
 }
 
-class _VoceRow extends ConsumerStatefulWidget {
+class _VoceRow extends ConsumerWidget {
   const _VoceRow({super.key, required this.voce, required this.percentuale});
 
   final Voce voce;
   final String percentuale;
 
   @override
-  ConsumerState<_VoceRow> createState() => _VoceRowState();
-}
-
-class _VoceRowState extends ConsumerState<_VoceRow> {
-  late final _controller = TextEditingController(text: _saldo);
-  final _focus = FocusNode();
-
-  String get _saldo => scriviImporto(widget.voce.saldoCentesimi);
-
-  @override
-  void initState() {
-    super.initState();
-    _focus.addListener(() {
-      if (!_focus.hasFocus) _salva();
-    });
-  }
-
-  @override
-  void didUpdateWidget(_VoceRow old) {
-    super.didUpdateWidget(old);
-    if (!_focus.hasFocus) _controller.text = _saldo;
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    _focus.dispose();
-    super.dispose();
-  }
-
-  Future<void> _salva() async {
-    final messenger = ScaffoldMessenger.of(context);
-    final voce = widget.voce;
-    final centesimi = leggiImporto(_controller.text);
-    if (centesimi == null) {
-      messenger.showSnackBar(
-        const SnackBar(content: Text(messaggioImportoNonValido)),
-      );
-    } else if (centesimi != voce.saldoCentesimi) {
-      try {
-        await ref
-            .read(vociRepositoryProvider)
-            .salva(
-              Voce.semplice(
-                id: voce.id,
-                nome: voce.nome,
-                gruppo: voce.gruppo,
-                saldoCentesimi: centesimi,
+  Widget build(BuildContext context, WidgetRef ref) {
+    final inAttesa =
+        ref.watch(vociInAttesaProvider).value?.contains(voce.id) ?? false;
+    return InkWell(
+      onTap: voce.conDettaglio
+          ? () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => DettaglioPage(voceId: voce.id),
               ),
-            );
-      } catch (_) {
-        messenger.showSnackBar(
-          const SnackBar(content: Text('Modifica non salvata, riprova')),
-        );
-      }
-    }
-    // Shows the saved value (normalized on success, restored on error).
-    if (mounted) _controller.text = _saldo;
-  }
-
-  @override
-  Widget build(BuildContext context) => ListTile(
-    title: Text(widget.voce.nome),
-    onTap: widget.voce.conDettaglio
-        ? () => Navigator.of(context).push(
-            MaterialPageRoute<void>(
-              builder: (_) => DettaglioPage(voceId: widget.voce.id),
+            )
+          : null,
+      child: Padding(
+        padding: const EdgeInsets.only(left: 16),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(voce.nome),
+                  if (inAttesa)
+                    Text(
+                      testoInAttesa,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                ],
+              ),
             ),
-          )
-        : null,
-    trailing: SizedBox(
-      width: 220,
-      child: Row(
-        children: [
-          Expanded(
-            child: widget.voce.conDettaglio
-                ? Text(
-                    scriviImporto(widget.voce.saldoCentesimi),
-                    textAlign: TextAlign.end,
-                  )
-                : TextField(
-                    controller: _controller,
-                    focusNode: _focus,
-                    textAlign: TextAlign.end,
-                    onSubmitted: (_) => _salva(),
-                    decoration: const InputDecoration.collapsed(hintText: ''),
-                  ),
-          ),
-          const SizedBox(width: 8),
-          Text(widget.percentuale),
-          PopupMenuButton<String>(
-            tooltip: 'Azioni ${widget.voce.nome}',
-            onSelected: (azione) {
-              final voci = ref.read(vociProvider).value ?? const [];
-              switch (azione) {
-                case 'rinomina':
-                  rinominaVoce(context, ref, voci, widget.voce);
-                case 'sposta':
-                  spostaVoce(context, ref, voci, widget.voce);
-                case 'elimina':
-                  eliminaVoce(context, ref, widget.voce);
-              }
-            },
-            itemBuilder: (_) => const [
-              PopupMenuItem(value: 'rinomina', child: Text('Rinomina')),
-              PopupMenuItem(value: 'sposta', child: Text('Sposta')),
-              PopupMenuItem(value: 'elimina', child: Text('Elimina')),
-            ],
-          ),
-        ],
+            if (voce.conDettaglio)
+              SizedBox(
+                width: larghezzaSaldo,
+                child: Text(
+                  scriviImporto(voce.saldoCentesimi),
+                  textAlign: TextAlign.end,
+                ),
+              )
+            else
+              SaldoEditor(
+                saldoCentesimi: voce.saldoCentesimi,
+                onSalva: (c) => modificaVoce(
+                  context,
+                  ref,
+                  ref.read(vociProvider).value ?? const [],
+                  voce.id,
+                  (s) => s.modificaSaldoVoce(voce.id, c),
+                ),
+              ),
+            const SizedBox(width: 8),
+            Text(percentuale),
+            PopupMenuButton<String>(
+              tooltip: 'Azioni ${voce.nome}',
+              onSelected: (azione) {
+                final voci = ref.read(vociProvider).value ?? const [];
+                switch (azione) {
+                  case 'rinomina':
+                    rinominaVoce(context, ref, voci, voce);
+                  case 'sposta':
+                    spostaVoce(context, ref, voci, voce);
+                  case 'elimina':
+                    eliminaVoce(context, ref, voce);
+                }
+              },
+              itemBuilder: (_) => const [
+                PopupMenuItem(value: 'rinomina', child: Text('Rinomina')),
+                PopupMenuItem(value: 'sposta', child: Text('Sposta')),
+                PopupMenuItem(value: 'elimina', child: Text('Elimina')),
+              ],
+            ),
+          ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 }

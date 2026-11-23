@@ -16,6 +16,24 @@ class FakeVociRepository implements VociRepository {
   final _changes = StreamController<void>.broadcast();
   bool _inizializzato;
   Object? errore;
+  final _inAttesa = StreamController<Set<String>>.broadcast();
+  Set<String> _attesa = {};
+  var _contatore = 0;
+
+  /// Simulates the server (not) confirming the writes of the given voci.
+  void impostaInAttesa(Set<String> ids) {
+    _attesa = ids;
+    _inAttesa.add(ids);
+  }
+
+  @override
+  Stream<Set<String>> osservaInAttesa() async* {
+    yield _attesa;
+    yield* _inAttesa.stream;
+  }
+
+  @override
+  String nuovoId() => 'id${_contatore++}';
 
   List<Voce> get _ordinate => [
     for (final g in Gruppo.values) ..._voci.where((v) => v.gruppo == g),

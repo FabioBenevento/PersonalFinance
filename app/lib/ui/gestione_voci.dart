@@ -1,3 +1,4 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -12,23 +13,78 @@ const nomiGruppo = {
   Gruppo.investimenti: 'Investimenti',
 };
 
-/// Applies [f] to the current situazione and saves/deletes accordingly,
-/// showing validation or save errors in a snackbar.
-Future<void> _esegui(
-  BuildContext context,
-  WidgetRef ref,
-  Future<void> Function() f,
-) async {
+/// Runs [f], showing validation and save errors in a snackbar.
+Future<void> esegui(BuildContext context, Future<void> Function() f) async {
   final messenger = ScaffoldMessenger.of(context);
   try {
     await f();
   } on ValidazioneException catch (e) {
     messenger.showSnackBar(SnackBar(content: Text(e.message)));
-  } catch (_) {
+  } on FirebaseException {
     messenger.showSnackBar(
       const SnackBar(content: Text('Modifica non salvata, riprova')),
     );
   }
+}
+
+/// Applies [f] to the situazione and saves the voce [voceId] it changed.
+Future<void> modificaVoce(
+  BuildContext context,
+  WidgetRef ref,
+  List<Voce> voci,
+  String voceId,
+  Situazione Function(Situazione) f,
+) => esegui(
+  context,
+  () => ref
+      .read(vociRepositoryProvider)
+      .salva(f(Situazione(voci)).voci.firstWhere((v) => v.id == voceId)),
+);
+
+/// Asks for a name; null if cancelled.
+Future<String?> chiediNome(
+  BuildContext context,
+  String titolo,
+  String iniziale,
+) => showDialog<String>(
+  context: context,
+  builder: (_) => _NomeDialog(titolo, iniziale),
+);
+
+class _NomeDialog extends StatefulWidget {
+  const _NomeDialog(this.titolo, this.iniziale);
+
+  final String titolo;
+  final String iniziale;
+
+  @override
+  State<_NomeDialog> createState() => _NomeDialogState();
+}
+
+class _NomeDialogState extends State<_NomeDialog> {
+  late final _nome = TextEditingController(text: widget.iniziale);
+
+  @override
+  void dispose() {
+    _nome.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: Text(widget.titolo),
+    content: TextField(controller: _nome, autofocus: true),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.pop(context),
+        child: const Text('Annulla'),
+      ),
+      TextButton(
+        onPressed: () => Navigator.pop(context, _nome.text),
+        child: const Text('Salva'),
+      ),
+    ],
+  );
 }
 
 Future<void> aggiungiVoce(
@@ -36,73 +92,90 @@ Future<void> aggiungiVoce(
   WidgetRef ref,
   List<Voce> voci,
 ) async {
-  final nome = TextEditingController();
-  var gruppo = Gruppo.salvadanaio;
-  var conDettaglio = false;
-  final ok = await showDialog<bool>(
-    context: context,
-    builder: (_) => StatefulBuilder(
-      builder: (context, setState) => AlertDialog(
-        title: const Text('Nuova voce'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
+  final nuova =
+      await showDialog<({String nome, Gruppo gruppo, bool dettaglio})>(
+        context: context,
+        builder: (_) => const _NuovaVoceDialog(),
+      );
+  if (nuova == null || !context.mounted) return;
+  final id = ref.read(vociRepositoryProvider).nuovoId();
+  final voce = nuova.dettaglio
+      ? Voce.conDettaglio(id: id, nome: nuova.nome, gruppo: nuova.gruppo)
+      : Voce.semplice(id: id, nome: nuova.nome, gruppo: nuova.gruppo);
+  await modificaVoce(context, ref, voci, id, (s) => s.aggiungiVoce(voce));
+}
+
+class _NuovaVoceDialog extends StatefulWidget {
+  const _NuovaVoceDialog();
+
+  @override
+  State<_NuovaVoceDialog> createState() => _NuovaVoceDialogState();
+}
+
+class _NuovaVoceDialogState extends State<_NuovaVoceDialog> {
+  final _nome = TextEditingController();
+  var _gruppo = Gruppo.salvadanaio;
+  var _conDettaglio = false;
+
+  @override
+  void dispose() {
+    _nome.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: const Text('Nuova voce'),
+    content: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        TextField(
+          controller: _nome,
+          decoration: const InputDecoration(labelText: 'Nome'),
+        ),
+        Wrap(
+          spacing: 8,
           children: [
-            TextField(
-              controller: nome,
-              decoration: const InputDecoration(labelText: 'Nome'),
+            for (final g in Gruppo.values)
+              ChoiceChip(
+                label: Text(nomiGruppo[g]!),
+                selected: _gruppo == g,
+                onSelected: (_) => setState(() => _gruppo = g),
+              ),
+          ],
+        ),
+        Wrap(
+          spacing: 8,
+          children: [
+            ChoiceChip(
+              label: const Text('Semplice'),
+              selected: !_conDettaglio,
+              onSelected: (_) => setState(() => _conDettaglio = false),
             ),
-            Wrap(
-              spacing: 8,
-              children: [
-                for (final g in Gruppo.values)
-                  ChoiceChip(
-                    label: Text(nomiGruppo[g]!),
-                    selected: gruppo == g,
-                    onSelected: (_) => setState(() => gruppo = g),
-                  ),
-              ],
-            ),
-            Wrap(
-              spacing: 8,
-              children: [
-                ChoiceChip(
-                  label: const Text('Semplice'),
-                  selected: !conDettaglio,
-                  onSelected: (_) => setState(() => conDettaglio = false),
-                ),
-                ChoiceChip(
-                  label: const Text('Con dettaglio'),
-                  selected: conDettaglio,
-                  onSelected: (_) => setState(() => conDettaglio = true),
-                ),
-              ],
+            ChoiceChip(
+              label: const Text('Con dettaglio'),
+              selected: _conDettaglio,
+              onSelected: (_) => setState(() => _conDettaglio = true),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Annulla'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Aggiungi'),
-          ),
-        ],
-      ),
+      ],
     ),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.pop(context),
+        child: const Text('Annulla'),
+      ),
+      TextButton(
+        onPressed: () => Navigator.pop(context, (
+          nome: _nome.text,
+          gruppo: _gruppo,
+          dettaglio: _conDettaglio,
+        )),
+        child: const Text('Aggiungi'),
+      ),
+    ],
   );
-  if (ok != true || !context.mounted) return;
-  final id = DateTime.now().microsecondsSinceEpoch.toString();
-  final voce = conDettaglio
-      ? Voce.conDettaglio(id: id, nome: nome.text, gruppo: gruppo)
-      : Voce.semplice(id: id, nome: nome.text, gruppo: gruppo);
-  await _esegui(context, ref, () async {
-    final nuova = Situazione(voci).aggiungiVoce(voce);
-    await ref
-        .read(vociRepositoryProvider)
-        .salva(nuova.voci.firstWhere((v) => v.id == id));
-  });
 }
 
 Future<void> rinominaVoce(
@@ -111,31 +184,15 @@ Future<void> rinominaVoce(
   List<Voce> voci,
   Voce voce,
 ) async {
-  final nome = TextEditingController(text: voce.nome);
-  final ok = await showDialog<bool>(
-    context: context,
-    builder: (_) => AlertDialog(
-      title: const Text('Rinomina voce'),
-      content: TextField(controller: nome, autofocus: true),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context, false),
-          child: const Text('Annulla'),
-        ),
-        TextButton(
-          onPressed: () => Navigator.pop(context, true),
-          child: const Text('Salva'),
-        ),
-      ],
-    ),
+  final nome = await chiediNome(context, 'Rinomina voce', voce.nome);
+  if (nome == null || !context.mounted) return;
+  await modificaVoce(
+    context,
+    ref,
+    voci,
+    voce.id,
+    (s) => s.rinominaVoce(voce.id, nome),
   );
-  if (ok != true || !context.mounted) return;
-  await _esegui(context, ref, () async {
-    final nuova = Situazione(voci).rinominaVoce(voce.id, nome.text);
-    await ref
-        .read(vociRepositoryProvider)
-        .salva(nuova.voci.firstWhere((v) => v.id == voce.id));
-  });
 }
 
 Future<void> spostaVoce(
@@ -159,12 +216,13 @@ Future<void> spostaVoce(
     ),
   );
   if (gruppo == null || !context.mounted) return;
-  await _esegui(context, ref, () async {
-    final nuova = Situazione(voci).spostaVoce(voce.id, gruppo);
-    await ref
-        .read(vociRepositoryProvider)
-        .salva(nuova.voci.firstWhere((v) => v.id == voce.id));
-  });
+  await modificaVoce(
+    context,
+    ref,
+    voci,
+    voce.id,
+    (s) => s.spostaVoce(voce.id, gruppo),
+  );
 }
 
 Future<void> eliminaVoce(BuildContext context, WidgetRef ref, Voce voce) async {
@@ -188,9 +246,8 @@ Future<void> eliminaVoce(BuildContext context, WidgetRef ref, Voce voce) async {
     ),
   );
   if (ok != true || !context.mounted) return;
-  await _esegui(
+  await esegui(
     context,
-    ref,
     () => ref.read(vociRepositoryProvider).elimina(voce.id),
   );
 }
