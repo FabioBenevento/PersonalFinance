@@ -77,4 +77,20 @@ class FirestoreVociRepository implements VociRepository {
     batch.set(_utente, {'inizializzato': true});
     await batch.commit();
   }
+
+  @override
+  Future<void> classificaSeMancanti(
+    Map<String, CategoriaInvestimento> categorie,
+  ) => _db.runTransaction((t) async {
+    final docs = [for (final id in categorie.keys) await t.get(_voci.doc(id))];
+    for (final d in docs) {
+      final data = d.data();
+      if (data == null ||
+          data['gruppo'] != Gruppo.investimenti.name ||
+          data['categoria'] != null) {
+        continue;
+      }
+      t.update(d.reference, {'categoria': categorie[d.id]!.name});
+    }
+  });
 }

@@ -21,6 +21,7 @@ class FakeVociRepository implements VociRepository {
   void Function(Voce)? suSalva;
   Future<void>? primaDiSalva;
   Future<void>? primaDiEliminare;
+  Future<void>? primaDiClassificare;
   final _inAttesa = StreamController<Set<String>>.broadcast();
   Set<String> _attesa = {};
   var _contatore = 0;
@@ -87,4 +88,22 @@ class FakeVociRepository implements VociRepository {
     _voci.addAll(iniziali);
     _inizializzato = true;
   });
+
+  @override
+  Future<void> classificaSeMancanti(
+    Map<String, CategoriaInvestimento> categorie,
+  ) async {
+    await primaDiClassificare;
+    _scrivi(() {
+      for (var i = 0; i < _voci.length; i++) {
+        final v = _voci[i];
+        final c = categorie[v.id];
+        if (c != null &&
+            v.gruppo == Gruppo.investimenti &&
+            v.categoria == null) {
+          _voci[i] = v.copyWith(categoria: c);
+        }
+      }
+    });
+  }
 }

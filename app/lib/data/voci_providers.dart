@@ -52,3 +52,16 @@ final inizializzazioneProvider = FutureProvider<void>((ref) async {
   final service = InizializzazioneService(ref.watch(vociRepositoryProvider));
   await service.inizializzaSeNecessario(vociIniziali);
 });
+
+/// Classification of the initial voci saved before the categorie existed;
+/// coordinated with the other writes, retried by invalidating it.
+final migrazioneCategorieProvider = FutureProvider<void>(
+  retry: (_, _) => null,
+  (ref) async {
+    await ref.watch(inizializzazioneProvider.future);
+    final service = InizializzazioneService(ref.watch(vociRepositoryProvider));
+    await ref
+        .read(operazioniCoordinatorProvider)
+        .modifica(service.migraCategorie);
+  },
+);

@@ -10,6 +10,49 @@ const _iniziali = [
 ];
 
 void main() {
+  test(
+    'CAT-009 CAT-010 CAT-011 migra identità iniziali una sola volta',
+    () async {
+      final repo = FakeVociRepository(const [
+        Voce.semplice(
+          id: 'v20',
+          nome: 'Rinominata',
+          gruppo: Gruppo.investimenti,
+          saldoCentesimi: 345,
+        ),
+        Voce.semplice(
+          id: 'v21',
+          nome: 'Scelta',
+          gruppo: Gruppo.investimenti,
+          categoria: CategoriaInvestimento.crypto,
+        ),
+        Voce.semplice(id: 'v22', nome: 'Spostata', gruppo: Gruppo.liquidita),
+        Voce.semplice(
+          id: 'nuova',
+          nome: 'Pensionline',
+          gruppo: Gruppo.investimenti,
+        ),
+      ]);
+      final service = InizializzazioneService(repo);
+      await service.migraCategorie();
+      await service.migraCategorie();
+      final voci = await repo.osserva().first;
+      expect(voci.length, 4);
+      expect(
+        voci.firstWhere((v) => v.id == 'v20').categoria,
+        CategoriaInvestimento.pianiAccumulo,
+      );
+      expect(voci.firstWhere((v) => v.id == 'v20').saldoCentesimi, 345);
+      expect(voci.firstWhere((v) => v.id == 'v20').nome, 'Rinominata');
+      expect(
+        voci.firstWhere((v) => v.id == 'v21').categoria,
+        CategoriaInvestimento.crypto,
+      );
+      expect(voci.firstWhere((v) => v.id == 'v22').categoria, isNull);
+      expect(voci.firstWhere((v) => v.id == 'nuova').categoria, isNull);
+    },
+  );
+
   test('SIT-022 primo accesso carica le voci iniziali', () async {
     final repo = FakeVociRepository();
     final service = InizializzazioneService(repo);

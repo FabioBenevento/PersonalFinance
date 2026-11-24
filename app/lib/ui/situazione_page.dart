@@ -153,6 +153,7 @@ class _Elenco extends ConsumerWidget {
                         ),
                         grassetto: true,
                       ),
+                      if (g == Gruppo.investimenti) const _StatoMigrazione(),
                       if (g == Gruppo.investimenti)
                         RiepilogoCategorie(
                           situazione: situazione,
@@ -186,6 +187,35 @@ class _Elenco extends ConsumerWidget {
       ),
     ),
   );
+}
+
+/// Wait/error of the automatic classification; the saldi stay usable meanwhile.
+class _StatoMigrazione extends ConsumerWidget {
+  const _StatoMigrazione();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) =>
+      switch (ref.watch(migrazioneCategorieProvider)) {
+        AsyncData() => const SizedBox.shrink(),
+        AsyncError() => Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+          child: Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 8,
+            children: [
+              const Text('Classificazione automatica non riuscita'),
+              TextButton(
+                onPressed: () => ref.invalidate(migrazioneCategorieProvider),
+                child: const Text('Riprova classificazione'),
+              ),
+            ],
+          ),
+        ),
+        _ => const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+          child: Text('Classificazione automatica in corso…'),
+        ),
+      };
 }
 
 class _Riepilogo extends StatelessWidget {

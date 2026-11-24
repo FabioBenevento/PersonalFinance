@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -765,6 +767,60 @@ void main() {
 }
 
 void inizializzazioneTests() {
+  testWidgets(
+    'CAT-009 CAT-012 migrazione in attesa, errore e nuovo tentativo senza nascondere i saldi',
+    (tester) async {
+      tester.view.physicalSize = const Size(1000, 1000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final repo = FakeVociRepository(const [
+        Voce.semplice(
+          id: 'v20',
+          nome: 'Pensionline',
+          gruppo: Gruppo.investimenti,
+          saldoCentesimi: 50000,
+        ),
+      ]);
+      final attesa = Completer<void>();
+      repo.primaDiClassificare = attesa.future;
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authGatewayProvider.overrideWithValue(_Gateway()),
+            vociRepositoryProvider.overrideWithValue(repo),
+          ],
+          child: const PersonalFinanceApp(),
+        ),
+      );
+      for (var i = 0; i < 5; i++) {
+        await tester.pump();
+      }
+      expect(find.text('Pensionline'), findsOneWidget);
+      expect(find.text('Classificazione automatica in corso…'), findsOneWidget);
+      attesa.completeError(Exception('rete'));
+      await tester.pumpAndSettle();
+      expect(find.text('Pensionline'), findsOneWidget);
+      expect(find.textContaining('500,00'), findsWidgets);
+      expect(find.text('Classificazione incompleta'), findsOneWidget);
+      expect(
+        find.text('Classificazione automatica non riuscita'),
+        findsOneWidget,
+      );
+      repo.primaDiClassificare = null;
+      await tester.tap(find.text('Riprova classificazione'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Classificazione automatica non riuscita'),
+        findsNothing,
+      );
+      expect(find.text('Classificazione incompleta'), findsNothing);
+      expect(
+        (await repo.osserva().first).single.categoria,
+        CategoriaInvestimento.pianiAccumulo,
+      );
+    },
+  );
+
   testWidgets(
     'SIT-022 primo accesso: 24 voci a zero, indicatore durante il caricamento',
     (tester) async {

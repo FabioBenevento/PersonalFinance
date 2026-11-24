@@ -21,4 +21,10 @@ abstract class VociRepository {
 
   /// Atomically writes [iniziali] and sets the initialized flag.
   Future<void> scriviIniziali(List<Voce> iniziali);
+
+  /// In one transaction, sets the categoria of each voce in [categorie] that
+  /// still exists in the Investimenti without one; touches no other field.
+  Future<void> classificaSeMancanti(
+    Map<String, CategoriaInvestimento> categorie,
+  );
 }
