@@ -9,6 +9,163 @@ Voce _v(String n, Gruppo g, int c) =>
 
 void main() {
   test(
+    'CAT-006 categorie sul totale investimenti e dettaglio una sola volta',
+    () {
+      final s = Situazione([
+        const Voce.semplice(
+          id: 'pa',
+          nome: 'Pensione',
+          gruppo: Gruppo.investimenti,
+          categoria: CategoriaInvestimento.pianiAccumulo,
+          saldoCentesimi: 10000,
+        ),
+        const Voce.conDettaglio(
+          id: 'p',
+          nome: 'Prestiti',
+          gruppo: Gruppo.investimenti,
+          categoria: CategoriaInvestimento.p2pLanding,
+          righe: [Riga(id: 'r', nome: 'Piattaforma', saldoCentesimi: 20000)],
+        ),
+        const Voce.semplice(
+          id: 'd',
+          nome: 'Titoli',
+          gruppo: Gruppo.investimenti,
+          categoria: CategoriaInvestimento.depositoTitoli,
+          saldoCentesimi: 40000,
+        ),
+        const Voce.semplice(
+          id: 'c',
+          nome: 'Criptovalute',
+          gruppo: Gruppo.investimenti,
+          categoria: CategoriaInvestimento.crypto,
+          saldoCentesimi: 10000,
+        ),
+        _v('conto', Gruppo.liquidita, 120000),
+      ]);
+      expect(CategoriaInvestimento.values.map(s.totaleCategoria), [
+        10000,
+        20000,
+        40000,
+        10000,
+      ]);
+      expect(CategoriaInvestimento.values.map(s.percentualeCategoria), [
+        1250,
+        2500,
+        5000,
+        1250,
+      ]);
+      expect(s.totaleGruppo(Gruppo.investimenti), 80000);
+      final cambiata = s
+          .modificaSaldoVoce('pa', 20000)
+          .modificaSaldoRiga('p', 'r', 30000);
+      expect(
+        cambiata.totaleCategoria(CategoriaInvestimento.pianiAccumulo),
+        20000,
+      );
+      expect(cambiata.totaleCategoria(CategoriaInvestimento.p2pLanding), 30000);
+      expect(cambiata.totaleGruppo(Gruppo.investimenti), 100000);
+      expect(
+        cambiata.percentualeCategoria(CategoriaInvestimento.p2pLanding),
+        3000,
+      );
+    },
+  );
+
+  test('CAT-006 arrotondamenti categoria come le altre percentuali', () {
+    Situazione esempio(int resto) => Situazione([
+      const Voce.semplice(
+        id: 'p',
+        nome: 'Pensione',
+        gruppo: Gruppo.investimenti,
+        categoria: CategoriaInvestimento.pianiAccumulo,
+        saldoCentesimi: 100,
+      ),
+      _v('altro', Gruppo.investimenti, resto),
+    ]);
+    expect(
+      esempio(200).percentualeCategoria(CategoriaInvestimento.pianiAccumulo),
+      3333,
+    );
+    expect(
+      esempio(700).percentualeCategoria(CategoriaInvestimento.pianiAccumulo),
+      1250,
+    );
+    final mezzo = Situazione([
+      const Voce.semplice(
+        id: 'p',
+        nome: 'Pensione',
+        gruppo: Gruppo.investimenti,
+        categoria: CategoriaInvestimento.pianiAccumulo,
+        saldoCentesimi: 1,
+      ),
+      _v('altro', Gruppo.investimenti, 799),
+    ]);
+    expect(mezzo.percentualeCategoria(CategoriaInvestimento.pianiAccumulo), 13);
+  });
+
+  test('CAT-007 categorie vuote e base zero', () {
+    const vuota = Situazione([]);
+    expect(CategoriaInvestimento.values.map(vuota.totaleCategoria), [
+      0,
+      0,
+      0,
+      0,
+    ]);
+    expect(CategoriaInvestimento.values.map(vuota.percentualeCategoria), [
+      null,
+      null,
+      null,
+      null,
+    ]);
+    expect(vuota.classificazioneCompleta, isTrue);
+    final s = Situazione([
+      const Voce.semplice(
+        id: 'p',
+        nome: 'Pensione',
+        gruppo: Gruppo.investimenti,
+        categoria: CategoriaInvestimento.pianiAccumulo,
+        saldoCentesimi: 100,
+      ),
+    ]);
+    expect(s.percentualeCategoria(CategoriaInvestimento.crypto), 0);
+  });
+
+  test(
+    'CAT-008 voci da classificare anche a zero senza alterare il totale',
+    () {
+      final s = Situazione([
+        const Voce.semplice(
+          id: 'p',
+          nome: 'Pensione',
+          gruppo: Gruppo.investimenti,
+          categoria: CategoriaInvestimento.pianiAccumulo,
+          saldoCentesimi: 10000,
+        ),
+        _v('ignota', Gruppo.investimenti, 5000),
+        _v('zero', Gruppo.investimenti, 0),
+        _v('conto', Gruppo.liquidita, 9000),
+      ]);
+      expect(s.vociDaClassificare.map((v) => v.id), ['ignota', 'zero']);
+      expect(s.importoDaClassificare, 5000);
+      expect(s.classificazioneCompleta, isFalse);
+      expect(s.totaleGruppo(Gruppo.investimenti), 15000);
+      expect(s.percentualeCategoria(CategoriaInvestimento.pianiAccumulo), 6667);
+      final parziale = s.modificaCategoria(
+        'ignota',
+        CategoriaInvestimento.crypto,
+      );
+      expect(parziale.importoDaClassificare, 0);
+      expect(parziale.classificazioneCompleta, isFalse);
+      expect(
+        parziale
+            .modificaCategoria('zero', CategoriaInvestimento.crypto)
+            .classificazioneCompleta,
+        isTrue,
+      );
+    },
+  );
+
+  test(
     'CAT-003 categoria conservata da saldo, nome, righe e copia fotografica',
     () {
       const semplice = Voce.semplice(

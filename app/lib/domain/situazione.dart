@@ -22,6 +22,25 @@ class Situazione {
   /// Percentuale del gruppo sul Totale (stesse convenzioni di [percentualeVoce]).
   int? percentualeGruppo(Gruppo g) => _percentuale(totaleGruppo(g), totale);
 
+  int totaleCategoria(CategoriaInvestimento categoria) => voci
+      .where((v) => v.gruppo == Gruppo.investimenti && v.categoria == categoria)
+      .fold(0, (s, v) => s + v.saldoCentesimi);
+
+  int? percentualeCategoria(CategoriaInvestimento categoria) => _percentuale(
+    totaleCategoria(categoria),
+    totaleGruppo(Gruppo.investimenti),
+  );
+
+  List<Voce> get vociDaClassificare => [
+    for (final v in voci)
+      if (v.gruppo == Gruppo.investimenti && v.categoria == null) v,
+  ];
+
+  int get importoDaClassificare =>
+      vociDaClassificare.fold(0, (s, v) => s + v.saldoCentesimi);
+
+  bool get classificazioneCompleta => vociDaClassificare.isEmpty;
+
   static int? _percentuale(int parte, int base) =>
       base == 0 ? null : (parte * 20000 + base) ~/ (2 * base);
 

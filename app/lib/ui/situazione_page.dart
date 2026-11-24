@@ -13,6 +13,7 @@ import 'saldo_editor.dart';
 import 'salva_fotografia.dart';
 import 'app_theme.dart';
 import 'patrimonio_layout.dart';
+import 'riepilogo_categorie.dart';
 
 class SituazionePage extends ConsumerWidget {
   const SituazionePage({super.key});
@@ -75,13 +76,13 @@ class SituazionePage extends ConsumerWidget {
   }
 }
 
-class _Elenco extends StatelessWidget {
+class _Elenco extends ConsumerWidget {
   const _Elenco(this.situazione);
 
   final Situazione situazione;
 
   @override
-  Widget build(BuildContext context) => Center(
+  Widget build(BuildContext context, WidgetRef ref) => Center(
     child: ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 1048),
       child: Padding(
@@ -152,6 +153,13 @@ class _Elenco extends StatelessWidget {
                         ),
                         grassetto: true,
                       ),
+                      if (g == Gruppo.investimenti)
+                        RiepilogoCategorie(
+                          situazione: situazione,
+                          onClassifica: ref.watch(operazioniBloccateProvider)
+                              ? null
+                              : (voce) => cambiaCategoria(context, ref, voce),
+                        ),
                       for (final v in situazione.voci.where(
                         (v) => v.gruppo == g,
                       ))

@@ -69,6 +69,120 @@ Future<void> scrivi(WidgetTester tester, String testo) async {
 
 void main() {
   testWidgets(
+    'CAT-007 nessun investimento mantiene quattro categorie ordinate',
+    (tester) async {
+      await pump(tester, [_vociSemplici.first]);
+      final y = <double>[];
+      for (final nome in [
+        'Piani accumulo',
+        'P2P Landing',
+        'Deposito Titoli',
+        'Crypto',
+      ]) {
+        expect(find.text(nome), findsOneWidget);
+        y.add(tester.getTopLeft(find.text(nome)).dy);
+      }
+      expect(y, orderedEquals([...y]..sort()));
+      final riepilogo = find.byKey(const ValueKey('riepilogo-categorie'));
+      expect(
+        find.descendant(of: riepilogo, matching: find.text('€ 0,00  —')),
+        findsNWidgets(4),
+      );
+      expect(find.text('Classificazione incompleta'), findsNothing);
+    },
+  );
+
+  testWidgets('CAT-008 riepilogo incompleto e classificazione manuale', (
+    tester,
+  ) async {
+    await pump(tester, [
+      const Voce.semplice(
+        id: 'p',
+        nome: 'Pensione',
+        gruppo: Gruppo.investimenti,
+        categoria: CategoriaInvestimento.pianiAccumulo,
+        saldoCentesimi: 10000,
+      ),
+      const Voce.semplice(
+        id: 'x',
+        nome: 'Da sistemare',
+        gruppo: Gruppo.investimenti,
+        saldoCentesimi: 5000,
+      ),
+    ]);
+    expect(find.text('€ 150,00  100,00%'), findsOneWidget);
+    expect(find.text('€ 100,00  66,67%'), findsOneWidget);
+    expect(find.text('Classificazione incompleta'), findsOneWidget);
+    expect(find.text('Da classificare: € 50,00'), findsOneWidget);
+    expect(find.widgetWithText(TextField, '€ 50,00'), findsOneWidget);
+    await tester.enterText(find.widgetWithText(TextField, '€ 50,00'), '0');
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pumpAndSettle();
+    expect(find.text('Classificazione incompleta'), findsOneWidget);
+    expect(find.text('Da classificare: € 0,00'), findsOneWidget);
+    await tester.tap(
+      find.widgetWithText(TextButton, 'Classifica Da sistemare'),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(
+        of: find.byType(SimpleDialog),
+        matching: find.text('Crypto'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Classificazione incompleta'), findsNothing);
+    expect(find.text('Da classificare: € 0,00'), findsNothing);
+    expect(find.widgetWithText(TextField, '€ 100,00'), findsOneWidget);
+  });
+
+  testWidgets(
+    'CAT-007 categorie vuote con investimenti zero e positivi a 360',
+    (tester) async {
+      tester.view.physicalSize = const Size(360, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final repo = await pump(tester, [
+        const Voce.semplice(
+          id: 'p',
+          nome: 'Pensione',
+          gruppo: Gruppo.investimenti,
+          categoria: CategoriaInvestimento.pianiAccumulo,
+        ),
+      ]);
+      final riepilogo = find.byKey(const ValueKey('riepilogo-categorie'));
+      await tester.ensureVisible(riepilogo);
+      expect(
+        find.descendant(of: riepilogo, matching: find.text('€ 0,00  —')),
+        findsNWidgets(4),
+      );
+      expect(find.text('Classificazione incompleta'), findsNothing);
+      await repo.salva(
+        const Voce.semplice(
+          id: 'p',
+          nome: 'Pensione',
+          gruppo: Gruppo.investimenti,
+          categoria: CategoriaInvestimento.pianiAccumulo,
+          saldoCentesimi: 10000,
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.descendant(
+          of: riepilogo,
+          matching: find.text('€ 100,00  100,00%'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: riepilogo, matching: find.text('€ 0,00  0,00%')),
+        findsNWidgets(3),
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
     'CAT-019 categoria non valida mostra errore di lettura delle voci',
     (tester) async {
       await tester.pumpWidget(
@@ -116,7 +230,12 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Categoria'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Crypto'));
+    await tester.tap(
+      find.descendant(
+        of: find.byType(SimpleDialog),
+        matching: find.text('Crypto'),
+      ),
+    );
     await tester.pumpAndSettle();
     expect(scritture, hasLength(1));
     final salvata = (await repo.osserva().first).single;
@@ -125,7 +244,13 @@ void main() {
     expect(salvata.nome, 'Prestiti');
     expect(salvata.saldoCentesimi, 1234);
     expect(salvata.righe!.single.nome, 'Piattaforma');
-    expect(find.text('Crypto'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('d')),
+        matching: find.text('Crypto'),
+      ),
+      findsOneWidget,
+    );
     await tester.tap(find.byTooltip('Azioni Prestiti'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Categoria'));
@@ -152,7 +277,12 @@ void main() {
         await tester.pumpAndSettle();
         await tester.tap(find.text('Categoria'));
         await tester.pumpAndSettle();
-        await tester.tap(find.text('Deposito Titoli'));
+        await tester.tap(
+          find.descendant(
+            of: find.byType(SimpleDialog),
+            matching: find.text('Deposito Titoli'),
+          ),
+        );
         await tester.pumpAndSettle();
       }
 
@@ -168,7 +298,13 @@ void main() {
         (await repo.osserva().first).firstWhere((v) => v.id == 'c').categoria,
         CategoriaInvestimento.depositoTitoli,
       );
-      expect(find.text('Deposito Titoli'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('c')),
+          matching: find.text('Deposito Titoli'),
+        ),
+        findsOneWidget,
+      );
       repo.impostaInAttesa({'c'});
       await tester.pumpAndSettle();
       expect(find.text('In attesa di sincronizzazione'), findsOneWidget);
@@ -186,7 +322,7 @@ void main() {
         tester.getTopLeft(find.text(n)).dy,
     ];
     expect(y, [...y]..sort());
-    expect(find.text('€ 0,00  —'), findsNWidgets(3));
+    expect(find.text('€ 0,00  —'), findsNWidgets(7));
     expect(find.text('€ 0,00'), findsNWidgets(5));
   });
 
