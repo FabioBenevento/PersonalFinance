@@ -147,7 +147,10 @@ void main() {
   });
 
   test('AND-014 mese di confronto mancante', () {
-    final v = variazioni([foto(2026, 9, liquidita: 100)])!;
+    final v = variazioni([
+      foto(2026, 9, liquidita: 100),
+      foto(2026, 6, liquidita: 50),
+    ])!;
     expect(v.precedente.confronto, Mese(2026, 8));
     expect(v.precedente.mancante, isTrue);
     expect(v.precedente.differenza, isNull);
