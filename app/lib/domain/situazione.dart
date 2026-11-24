@@ -41,6 +41,16 @@ class Situazione {
     return _mappaVoce(id, (v) => v.copyWith(nome: n));
   }
 
+  Situazione modificaCategoria(String id, CategoriaInvestimento categoria) =>
+      _mappaVoce(id, (v) {
+        if (v.gruppo != Gruppo.investimenti) {
+          throw const ValidazioneException(
+            'La categoria riguarda solo gli Investimenti',
+          );
+        }
+        return v.copyWith(categoria: categoria);
+      });
+
   /// La voce va in fondo al nuovo gruppo.
   Situazione spostaVoce(String id, Gruppo gruppo) {
     final v = voci.firstWhere((x) => x.id == id);
@@ -91,6 +101,7 @@ class Situazione {
       id: v.id,
       nome: v.nome,
       gruppo: v.gruppo,
+      categoria: v.categoria,
       saldoCentesimi: saldoCentesimi,
     ),
   );

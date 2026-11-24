@@ -15,6 +15,7 @@ class FotografiaMensile {
                id: v.id,
                nome: v.nome,
                gruppo: v.gruppo,
+               categoria: v.categoria,
                righe: List.unmodifiable([
                  for (final r in v.righe!)
                    Riga(
@@ -29,6 +30,7 @@ class FotografiaMensile {
                id: v.id,
                nome: v.nome,
                gruppo: v.gruppo,
+               categoria: v.categoria,
                saldoCentesimi: v.saldoCentesimi,
              ),
        ]);

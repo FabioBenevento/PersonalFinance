@@ -1,13 +1,31 @@
 import 'voce.dart';
 
-Voce _voceSemplice(int i, String nome, Gruppo g) =>
-    Voce.semplice(id: 'v$i', nome: nome, gruppo: g);
+const categorieInizialiInvestimenti = {
+  'v14': CategoriaInvestimento.p2pLanding,
+  'v15': CategoriaInvestimento.depositoTitoli,
+  'v16': CategoriaInvestimento.depositoTitoli,
+  'v17': CategoriaInvestimento.depositoTitoli,
+  'v18': CategoriaInvestimento.depositoTitoli,
+  'v19': CategoriaInvestimento.depositoTitoli,
+  'v20': CategoriaInvestimento.pianiAccumulo,
+  'v21': CategoriaInvestimento.pianiAccumulo,
+  'v22': CategoriaInvestimento.crypto,
+  'v23': CategoriaInvestimento.p2pLanding,
+};
+
+Voce _voceSemplice(int i, String nome, Gruppo g) => Voce.semplice(
+  id: 'v$i',
+  nome: nome,
+  gruppo: g,
+  categoria: categorieInizialiInvestimenti['v$i'],
+);
 
 Voce _voceConDettaglio(int i, String nome, Gruppo g, List<String> righe) =>
     Voce.conDettaglio(
       id: 'v$i',
       nome: nome,
       gruppo: g,
+      categoria: categorieInizialiInvestimenti['v$i'],
       righe: [
         for (var j = 0; j < righe.length; j++)
           Riga(id: 'v$i-r$j', nome: righe[j]),

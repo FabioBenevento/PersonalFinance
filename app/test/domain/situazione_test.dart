@@ -1,11 +1,49 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personal_finance/domain/situazione.dart';
 import 'package:personal_finance/domain/voce.dart';
+import 'package:personal_finance/domain/fotografia_mensile.dart';
+import 'package:personal_finance/domain/mese.dart';
 
 Voce _v(String n, Gruppo g, int c) =>
     Voce.semplice(id: n, nome: n, gruppo: g, saldoCentesimi: c);
 
 void main() {
+  test(
+    'CAT-003 categoria conservata da saldo, nome, righe e copia fotografica',
+    () {
+      const semplice = Voce.semplice(
+        id: 's',
+        nome: 'Pensione',
+        gruppo: Gruppo.investimenti,
+        categoria: CategoriaInvestimento.pianiAccumulo,
+        saldoCentesimi: 1200,
+      );
+      const dettaglio = Voce.conDettaglio(
+        id: 'd',
+        nome: 'Prestiti',
+        gruppo: Gruppo.investimenti,
+        categoria: CategoriaInvestimento.p2pLanding,
+        righe: [Riga(id: 'r', nome: 'Piattaforma', saldoCentesimi: 300)],
+      );
+      final s = Situazione([semplice, dettaglio])
+          .rinominaVoce('s', 'Pensione nuova')
+          .modificaSaldoVoce('s', 1500)
+          .rinominaVoce('d', 'Prestiti nuovi')
+          .rinominaRiga('d', 'r', 'Nuova piattaforma')
+          .modificaSaldoRiga('d', 'r', 400);
+      expect(s.voci.first.categoria, CategoriaInvestimento.pianiAccumulo);
+      expect(s.voci.first.saldoCentesimi, 1500);
+      expect(s.voci.last.categoria, CategoriaInvestimento.p2pLanding);
+      expect(s.voci.last.righe!.single.nome, 'Nuova piattaforma');
+      expect(s.voci.last.saldoCentesimi, 400);
+      final copia = FotografiaMensile(mese: Mese(2026, 11), voci: s.voci);
+      expect(copia.voci.map((v) => v.categoria), [
+        CategoriaInvestimento.pianiAccumulo,
+        CategoriaInvestimento.p2pLanding,
+      ]);
+    },
+  );
+
   _operazioni();
   test('SIT-006 saldo come somma delle righe', () {
     const v = Voce.conDettaglio(

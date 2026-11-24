@@ -3,6 +3,42 @@ import 'package:personal_finance/domain/voce.dart';
 import 'package:personal_finance/domain/voci_iniziali.dart';
 
 void main() {
+  test('CAT-001 quattro categorie con mappatura iniziale completa', () {
+    expect(CategoriaInvestimento.values, [
+      CategoriaInvestimento.pianiAccumulo,
+      CategoriaInvestimento.p2pLanding,
+      CategoriaInvestimento.depositoTitoli,
+      CategoriaInvestimento.crypto,
+    ]);
+    expect(
+      {
+        for (final v in vociIniziali.where(
+          (v) => v.gruppo == Gruppo.investimenti,
+        ))
+          v.nome: v.categoria,
+      },
+      {
+        'P2PLanding': CategoriaInvestimento.p2pLanding,
+        'Deposito Titoli – Scalable Capital':
+            CategoriaInvestimento.depositoTitoli,
+        'Deposito Titoli – TradeRepublic': CategoriaInvestimento.depositoTitoli,
+        'Deposito Titoli – Directa': CategoriaInvestimento.depositoTitoli,
+        'Deposito Titoli – DeGiro': CategoriaInvestimento.depositoTitoli,
+        'Interactive Brokers': CategoriaInvestimento.depositoTitoli,
+        'Pensionline': CategoriaInvestimento.pianiAccumulo,
+        'Piano Piano': CategoriaInvestimento.pianiAccumulo,
+        'Crypto': CategoriaInvestimento.crypto,
+        'Crowdfounding': CategoriaInvestimento.p2pLanding,
+      },
+    );
+    expect(
+      vociIniziali
+          .where((v) => v.gruppo != Gruppo.investimenti)
+          .map((v) => v.categoria),
+      everyElement(isNull),
+    );
+  });
+
   test('SIT-022 voci iniziali: conteggi, ordine, saldi e nomi univoci', () {
     Iterable<String> nomi(Gruppo g) =>
         vociIniziali.where((v) => v.gruppo == g).map((v) => v.nome);

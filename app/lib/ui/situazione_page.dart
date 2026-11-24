@@ -254,6 +254,11 @@ class _VoceRow extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(voce.nome),
+                  if (voce.categoria != null)
+                    Text(
+                      nomiCategoria[voce.categoria]!,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
                   if (inAttesa)
                     Text(
                       testoInAttesa,
@@ -308,6 +313,8 @@ class _VoceRow extends ConsumerWidget {
               enabled: !bloccato,
               onSelected: (azione) {
                 switch (azione) {
+                  case 'categoria':
+                    cambiaCategoria(context, ref, voce);
                   case 'rinomina':
                     rinominaVoce(context, ref, voce);
                   case 'sposta':
@@ -316,10 +323,15 @@ class _VoceRow extends ConsumerWidget {
                     eliminaVoce(context, ref, voce);
                 }
               },
-              itemBuilder: (_) => const [
-                PopupMenuItem(value: 'rinomina', child: Text('Rinomina')),
-                PopupMenuItem(value: 'sposta', child: Text('Sposta')),
-                PopupMenuItem(value: 'elimina', child: Text('Elimina')),
+              itemBuilder: (_) => [
+                if (voce.gruppo == Gruppo.investimenti)
+                  const PopupMenuItem(
+                    value: 'categoria',
+                    child: Text('Categoria'),
+                  ),
+                const PopupMenuItem(value: 'rinomina', child: Text('Rinomina')),
+                const PopupMenuItem(value: 'sposta', child: Text('Sposta')),
+                const PopupMenuItem(value: 'elimina', child: Text('Elimina')),
               ],
             ),
           ],

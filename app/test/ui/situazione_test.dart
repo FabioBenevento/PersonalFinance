@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personal_finance/auth/auth.dart';
 import 'package:personal_finance/data/voci_providers.dart';
+import 'package:personal_finance/data/voce_mapper.dart';
 import 'package:personal_finance/data/fotografie_providers.dart';
 import 'package:personal_finance/domain/voce.dart';
 import 'package:personal_finance/domain/voci_iniziali.dart';
@@ -67,6 +68,116 @@ Future<void> scrivi(WidgetTester tester, String testo) async {
 }
 
 void main() {
+  testWidgets(
+    'CAT-019 categoria non valida mostra errore di lettura delle voci',
+    (tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authGatewayProvider.overrideWithValue(_Gateway()),
+            vociRepositoryProvider.overrideWithValue(
+              FakeVociRepository(_vociSemplici),
+            ),
+            vociProvider.overrideWith(
+              (ref) => Stream.value({
+                'nome': 'ETF',
+                'gruppo': 'investimenti',
+                'tipo': 'semplice',
+                'ordine': 0,
+                'saldoCentesimi': 1200,
+                'categoria': 'sconosciuta',
+              }).map((data) => [voceFromMap('c', data)]),
+            ),
+          ],
+          child: const PersonalFinanceApp(),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Impossibile leggere le voci'), findsOneWidget);
+      expect(find.text('Totale'), findsNothing);
+    },
+  );
+
+  testWidgets('CAT-003 assegnazione, cambio e annullamento categoria', (
+    tester,
+  ) async {
+    final repo = await pump(tester, [
+      const Voce.conDettaglio(
+        id: 'd',
+        nome: 'Prestiti',
+        gruppo: Gruppo.investimenti,
+        categoria: CategoriaInvestimento.p2pLanding,
+        righe: [Riga(id: 'r', nome: 'Piattaforma', saldoCentesimi: 1234)],
+      ),
+    ]);
+    final scritture = <Voce>[];
+    repo.suSalva = scritture.add;
+    await tester.tap(find.byTooltip('Azioni Prestiti'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Categoria'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Crypto'));
+    await tester.pumpAndSettle();
+    expect(scritture, hasLength(1));
+    final salvata = (await repo.osserva().first).single;
+    expect(salvata.categoria, CategoriaInvestimento.crypto);
+    expect(salvata.id, 'd');
+    expect(salvata.nome, 'Prestiti');
+    expect(salvata.saldoCentesimi, 1234);
+    expect(salvata.righe!.single.nome, 'Piattaforma');
+    expect(find.text('Crypto'), findsOneWidget);
+    await tester.tap(find.byTooltip('Azioni Prestiti'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Categoria'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Annulla'));
+    await tester.pumpAndSettle();
+    expect(scritture, hasLength(1));
+    expect(
+      (await repo.osserva().first).single.categoria,
+      CategoriaInvestimento.crypto,
+    );
+  });
+
+  testWidgets(
+    'CAT-017 categoria non salvata e ripetizione con sincronizzazione',
+    (tester) async {
+      final repo = await pump(tester);
+      repo.errore = FirebaseException(
+        plugin: 'cloud_firestore',
+        code: 'unavailable',
+      );
+      Future<void> scegli() async {
+        await tester.tap(find.byTooltip('Azioni ETF'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Categoria'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Deposito Titoli'));
+        await tester.pumpAndSettle();
+      }
+
+      await scegli();
+      expect(find.text('Modifica non salvata, riprova'), findsOneWidget);
+      expect(
+        (await repo.osserva().first).firstWhere((v) => v.id == 'c').categoria,
+        isNull,
+      );
+      repo.errore = null;
+      await scegli();
+      expect(
+        (await repo.osserva().first).firstWhere((v) => v.id == 'c').categoria,
+        CategoriaInvestimento.depositoTitoli,
+      );
+      expect(find.text('Deposito Titoli'), findsOneWidget);
+      repo.impostaInAttesa({'c'});
+      await tester.pumpAndSettle();
+      expect(find.text('In attesa di sincronizzazione'), findsOneWidget);
+      repo.impostaInAttesa({});
+      await tester.pumpAndSettle();
+      expect(find.text('In attesa di sincronizzazione'), findsNothing);
+    },
+  );
+
   inizializzazioneTests();
   testWidgets('SIT-001 gruppi sempre visibili e in ordine', (tester) async {
     await pump(tester);

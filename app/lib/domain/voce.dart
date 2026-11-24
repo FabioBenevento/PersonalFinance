@@ -1,6 +1,8 @@
 /// Gruppo della Situazione Patrimoniale, nell'ordine di visualizzazione.
 enum Gruppo { salvadanaio, liquidita, investimenti }
 
+enum CategoriaInvestimento { pianiAccumulo, p2pLanding, depositoTitoli, crypto }
+
 /// Operazione rifiutata; [message] dice il motivo.
 class ValidazioneException implements Exception {
   const ValidazioneException(this.message);
@@ -34,6 +36,7 @@ class Voce {
     required this.id,
     required this.nome,
     required this.gruppo,
+    this.categoria,
     int saldoCentesimi = 0,
   }) : _saldoSemplice = saldoCentesimi,
        righe = null;
@@ -42,12 +45,14 @@ class Voce {
     required this.id,
     required this.nome,
     required this.gruppo,
+    this.categoria,
     this.righe = const [],
   }) : _saldoSemplice = 0;
 
   final String id;
   final String nome;
   final Gruppo gruppo;
+  final CategoriaInvestimento? categoria;
 
   /// Saldo inserito a mano: vale solo per le voci semplici (0 con dettaglio).
   final int _saldoSemplice;
@@ -56,18 +61,25 @@ class Voce {
   final List<Riga>? righe;
 
   /// Copia con i campi indicati sostituiti; il saldo semplice resta invariato.
-  Voce copyWith({String? nome, Gruppo? gruppo, List<Riga>? righe}) =>
-      conDettaglio
+  Voce copyWith({
+    String? nome,
+    Gruppo? gruppo,
+    List<Riga>? righe,
+    CategoriaInvestimento? categoria,
+    bool rimuoviCategoria = false,
+  }) => conDettaglio
       ? Voce.conDettaglio(
           id: id,
           nome: nome ?? this.nome,
           gruppo: gruppo ?? this.gruppo,
+          categoria: rimuoviCategoria ? null : categoria ?? this.categoria,
           righe: righe ?? this.righe!,
         )
       : Voce.semplice(
           id: id,
           nome: nome ?? this.nome,
           gruppo: gruppo ?? this.gruppo,
+          categoria: rimuoviCategoria ? null : categoria ?? this.categoria,
           saldoCentesimi: _saldoSemplice,
         );
 

@@ -14,6 +14,44 @@ const nomiGruppo = {
   Gruppo.investimenti: 'Investimenti',
 };
 
+const nomiCategoria = {
+  CategoriaInvestimento.pianiAccumulo: 'Piani accumulo',
+  CategoriaInvestimento.p2pLanding: 'P2P Landing',
+  CategoriaInvestimento.depositoTitoli: 'Deposito Titoli',
+  CategoriaInvestimento.crypto: 'Crypto',
+};
+
+Future<void> cambiaCategoria(
+  BuildContext context,
+  WidgetRef ref,
+  Voce voce,
+) async {
+  final categoria = await showDialog<CategoriaInvestimento>(
+    context: context,
+    builder: (context) => SimpleDialog(
+      title: Text('Categoria di ${voce.nome}'),
+      children: [
+        for (final categoria in CategoriaInvestimento.values)
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(context, categoria),
+            child: Text(nomiCategoria[categoria]!),
+          ),
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Annulla'),
+        ),
+      ],
+    ),
+  );
+  if (categoria == null || !context.mounted) return;
+  await modificaVoce(
+    context,
+    ref,
+    voce.id,
+    (s) => s.modificaCategoria(voce.id, categoria),
+  );
+}
+
 /// Runs [f], showing validation and save errors in a snackbar.
 Future<void> esegui(BuildContext context, Future<void> Function() f) async {
   final messenger = ScaffoldMessenger.of(context);
