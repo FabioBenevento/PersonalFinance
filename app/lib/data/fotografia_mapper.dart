@@ -3,26 +3,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../domain/fotografia_mensile.dart';
 import '../domain/mese.dart';
 import '../domain/voce.dart';
+import 'fotografia_documento.dart';
 import 'voce_mapper.dart';
 
-Map<String, Object?> fotografiaToMap(FotografiaMensile fotografia) {
-  final ordini = <Gruppo, int>{};
-  return {
-    'versioneSchema': fotografia.versioneSchema,
-    'revisione': fotografia.revisione,
-    'salvataIl': FieldValue.serverTimestamp(),
-    'voci': [
-      for (final voce in fotografia.voci)
-        {
-          'id': voce.id,
-          ...voceToMap(
-            voce,
-            ordini[voce.gruppo] = (ordini[voce.gruppo] ?? -1) + 1,
-          ),
-        },
-    ],
-  };
-}
+Map<String, Object?> fotografiaToMap(FotografiaMensile fotografia) => {
+  ...fotografiaToDocumento(fotografia),
+  'salvataIl': FieldValue.serverTimestamp(),
+};
 
 FotografiaMensile fotografiaFromMap(String id, Map<String, dynamic> data) {
   final versione = data['versioneSchema'];
