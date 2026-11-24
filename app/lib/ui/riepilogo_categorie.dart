@@ -51,10 +51,13 @@ class RiepilogoCategorie extends StatelessWidget {
               children: [
                 Expanded(child: Text(nomiCategoria[categoria]!)),
                 const SizedBox(width: 8),
-                Text(
-                  '${scriviImporto(situazione.totaleCategoria(categoria))}  '
-                  '${scriviPercentuale(situazione.percentualeCategoria(categoria))}',
-                  style: stileCifre,
+                Flexible(
+                  child: Text(
+                    '${scriviImporto(situazione.totaleCategoria(categoria))}  '
+                    '${scriviPercentuale(situazione.percentualeCategoria(categoria))}',
+                    style: stileCifre,
+                    textAlign: TextAlign.end,
+                  ),
                 ),
               ],
             ),

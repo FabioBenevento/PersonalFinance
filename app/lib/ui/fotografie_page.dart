@@ -21,7 +21,13 @@ class FotografiePage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final fotografie = ref.watch(fotografieProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('PersonalFinance')),
+      appBar: AppBar(
+        title: const FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text('PersonalFinance'),
+        ),
+      ),
       body: PatrimonioLayout(
         storico: true,
         child: switch (fotografie) {

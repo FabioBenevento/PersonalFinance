@@ -184,6 +184,120 @@ void main() {
     },
   );
 
+  testWidgets('CAT-018 Situazione e fotografia a 360 con 24 voci', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    Future<void> controlla() async {
+      expect(tester.takeException(), isNull);
+      for (final e in find.byType(ListView).evaluate()) {
+        expect((e.widget as ListView).scrollDirection, Axis.vertical);
+      }
+      for (final e in find.byType(RenderBox).evaluate()) {
+        final box = e.renderObject! as RenderBox;
+        if (box.hasSize && box.attached) {
+          final b = box.localToGlobal(Offset.zero) & box.size;
+          expect(b.left, greaterThanOrEqualTo(-1));
+          expect(b.right, lessThanOrEqualTo(361));
+        }
+      }
+      final tagliati = [
+        for (final e in find.byType(RichText).evaluate())
+          if ((e.renderObject! as RenderParagraph).didExceedMaxLines)
+            (e.renderObject! as RenderParagraph).text.toPlainText(),
+      ];
+      expect(tagliati, isEmpty);
+    }
+
+    final voci = [
+      for (final v in vociIniziali)
+        v.conDettaglio
+            ? v
+            : Voce.semplice(
+                id: v.id,
+                nome: v.nome,
+                gruppo: v.gruppo,
+                saldoCentesimi: 123456789012,
+              ),
+      const Voce.semplice(
+        id: 'x',
+        nome: 'Da sistemare',
+        gruppo: Gruppo.investimenti,
+        saldoCentesimi: 123456789012,
+      ),
+    ];
+    final fotografie = FakeFotografieRepository(voci);
+    final repo = await pump(tester, voci, fotografie);
+    await tester.scrollUntilVisible(
+      find.text('Classificazione incompleta'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Classificazione incompleta'), findsOneWidget);
+    await controlla();
+
+    await tester.scrollUntilVisible(
+      find.widgetWithText(TextButton, 'Classifica Da sistemare'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(
+      find.widgetWithText(TextButton, 'Classifica Da sistemare'),
+    );
+    await tester.pumpAndSettle();
+    await controlla();
+    await tester.tap(
+      find.descendant(
+        of: find.byType(SimpleDialog),
+        matching: find.text('Crypto'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Classificazione incompleta'), findsNothing);
+    expect(
+      (await repo.osserva().first).firstWhere((v) => v.id == 'x').categoria,
+      CategoriaInvestimento.crypto,
+    );
+    await controlla();
+
+    final azioni = find.byTooltip('Azioni Da sistemare');
+    await tester.scrollUntilVisible(
+      azioni,
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(azioni);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Categoria'));
+    await tester.pumpAndSettle();
+    await controlla();
+    await tester.tap(
+      find.descendant(
+        of: find.byType(SimpleDialog),
+        matching: find.text('Deposito Titoli'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await controlla();
+
+    fotografie.vociServer = await repo.osserva().first;
+    await tester.tap(find.byTooltip('Salva fotografia'));
+    await tester.pumpAndSettle();
+    await controlla();
+    await tester.tap(find.text('Salva'));
+    await tester.pumpAndSettle();
+    expect(fotografie.fotografie, hasLength(1));
+    await tester.tap(find.byTooltip('Fotografie mensili'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(ListTile).first);
+    await tester.pumpAndSettle();
+    expect(find.text('FOTOGRAFIA MENSILE'), findsOneWidget);
+    await controlla();
+  });
+
   testWidgets(
     'CAT-019 categoria non valida mostra errore di lettura delle voci',
     (tester) async {
@@ -771,6 +885,53 @@ void main() {
 }
 
 void inizializzazioneTests() {
+  testWidgets('CAT-018 errore di migrazione a 360 senza testo tagliato', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final repo = FakeVociRepository(const [
+      Voce.semplice(
+        id: 'v20',
+        nome: 'Pensionline',
+        gruppo: Gruppo.investimenti,
+        saldoCentesimi: 123456789012,
+      ),
+    ]);
+    final attesa = Completer<void>();
+    repo.primaDiClassificare = attesa.future;
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authGatewayProvider.overrideWithValue(_Gateway()),
+          vociRepositoryProvider.overrideWithValue(repo),
+        ],
+        child: const PersonalFinanceApp(),
+      ),
+    );
+    for (var i = 0; i < 5; i++) {
+      await tester.pump();
+    }
+    attesa.completeError(Exception('rete'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Riprova classificazione'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(
+      find.text('Classificazione automatica non riuscita'),
+      findsOneWidget,
+    );
+    expect(find.text('Classificazione incompleta'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    expect([
+      for (final e in find.byType(RichText).evaluate())
+        if ((e.renderObject! as RenderParagraph).didExceedMaxLines)
+          (e.renderObject! as RenderParagraph).text.toPlainText(),
+    ], isEmpty);
+  });
   testWidgets(
     'CAT-009 CAT-012 migrazione in attesa, errore e nuovo tentativo senza nascondere i saldi',
     (tester) async {
