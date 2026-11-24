@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:personal_finance/domain/voci_iniziali.dart';
 
 void main() {
   test('IMP-018 la cartella dati e node_modules sono escluse da git', () {
@@ -33,6 +34,9 @@ void main() {
 
     final json = jsonDecode(text) as Map<String, dynamic>;
     check(json);
-    expect((json['voci'] as Map).length, 24);
+    final ids = {
+      for (final v in (json['voci'] as Map).values) (v as Map)['id'],
+    };
+    expect(ids, containsAll([for (final v in vociIniziali) v.id]));
   });
 }
