@@ -97,6 +97,10 @@ class _SalvaFotografiaButtonState extends ConsumerState<SalvaFotografiaButton> {
       messaggio = 'Fotografia salvata';
     } on ConflittoFotografiaException {
       messaggio = 'Esiste già una fotografia per ${nomeMese(mese)}';
+    } on ClassificazioneIncompletaException {
+      messaggio =
+          'Fotografia non salvata: classifica prima tutte le voci degli '
+          'Investimenti. Le fotografie già salvate non sono state modificate.';
     } catch (_) {
       messaggio = 'Fotografia non salvata, riprova';
     } finally {

@@ -171,6 +171,38 @@ void main() {
     expect(repo.fotografie['2026-11']!.voci.single.saldoCentesimi, 12500);
   });
 
+  testWidgets('CAT-015 voce senza categoria a zero blocca e poi riesce', (
+    tester,
+  ) async {
+    const incompleta = Voce.semplice(
+      id: 'z',
+      nome: 'Nuova',
+      gruppo: Gruppo.investimenti,
+      saldoCentesimi: 0,
+    );
+    final repo = FakeFotografieRepository([incompleta]);
+    await pump(tester, repo);
+    await tester.tap(find.byTooltip('Salva fotografia'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Salva'));
+    await tester.pumpAndSettle();
+    expect(repo.fotografie, isEmpty);
+    expect(
+      find.textContaining('classifica prima tutte le voci'),
+      findsOneWidget,
+    );
+    expect(find.text('Fotografia non salvata, riprova'), findsNothing);
+    // I comandi sono di nuovo disponibili e un nuovo tentativo riesce.
+    repo.vociServer = [
+      incompleta.copyWith(categoria: CategoriaInvestimento.crypto),
+    ];
+    await tester.tap(find.byTooltip('Salva fotografia'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Salva'));
+    await tester.pumpAndSettle();
+    expect(repo.fotografie.keys, ['2026-11']);
+  });
+
   testWidgets('FOT-001 mese corrente e successo solo dopo conferma', (
     tester,
   ) async {

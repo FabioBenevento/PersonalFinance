@@ -310,4 +310,65 @@ void main() {
     );
     expect((await documento())['versioneSchema'], 2);
   });
+  test('CAT-015 CAT-016 dati remoti non classificati bloccano creazione e sostituzione senza toccare lo storico', () async {
+    final repo = FirestoreFotografieRepository(harness.uid, harness.firestore);
+    final service = FotografieService(repo);
+    final voce = harness.firestore.doc('users/${harness.uid}/voci/inc');
+    await voce.set({
+      'nome': 'Nuovo',
+      'tipo': 'semplice',
+      'gruppo': 'investimenti',
+      'categoria': 'crypto',
+      'ordine': 9,
+      'saldoCentesimi': 0,
+    });
+    // La schermata (cache locale) vede la voce classificata, il server no.
+    await harness.scriviCampiRemoti('inc', {
+      'categoria': {'nullValue': null},
+    });
+    expect(
+      (await voce.get(const GetOptions(source: Source.cache)))['categoria'],
+      'crypto',
+    );
+    final oggi = DateTime(2026, 11, 23);
+    final nuovo = Mese(2026, 9);
+    await expectLater(
+      service.salvaNuovo(nuovo, oggi: oggi),
+      throwsA(isA<ClassificazioneIncompletaException>()),
+    );
+    expect(await repo.leggi(nuovo), isNull);
+
+    for (final schema in [1, 2]) {
+      final mese = Mese(2026, schema == 1 ? 5 : 6);
+      final ref = harness.firestore.doc(
+        'users/${harness.uid}/fotografie/${mese.id}',
+      );
+      await ref.set({
+        'versioneSchema': schema,
+        'revisione': 3,
+        'salvataIl': Timestamp.fromDate(DateTime.utc(2026, 7, 31)),
+        'voci': [
+          {
+            'id': 'old',
+            'nome': 'ETF',
+            'gruppo': 'investimenti',
+            'tipo': 'semplice',
+            'ordine': 0,
+            'saldoCentesimi': 500,
+            if (schema == 2) 'categoria': 'depositoTitoli',
+          },
+        ],
+      });
+      Future<Map<String, dynamic>> documento() async =>
+          (await ref.get(const GetOptions(source: Source.server))).data()!;
+      final prima = await documento();
+      final attesa = (await repo.leggi(mese))!;
+      await expectLater(
+        service.sostituisci(mese, attesa, oggi: oggi),
+        throwsA(isA<ClassificazioneIncompletaException>()),
+      );
+      expect(await documento(), prima);
+    }
+    await voce.delete();
+  });
 }

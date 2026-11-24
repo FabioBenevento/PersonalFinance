@@ -7,6 +7,11 @@ class ConflittoFotografiaException implements Exception {
   final FotografiaMensile attuale;
 }
 
+/// Almeno una voce degli Investimenti è senza categoria: nessuna fotografia.
+class ClassificazioneIncompletaException implements Exception {
+  const ClassificazioneIncompletaException();
+}
+
 abstract interface class FotografieRepository {
   Stream<List<FotografiaMensile>> osserva();
   Future<FotografiaMensile?> leggi(Mese mese);

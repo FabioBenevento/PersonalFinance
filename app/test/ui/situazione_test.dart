@@ -391,9 +391,13 @@ void main() {
   testWidgets(
     'FOT-014 errore di salvataggio ripristina controlli e consente retry',
     (tester) async {
-      final fotografie = FakeFotografieRepository(_vociSemplici);
+      final classificate = [
+        ..._vociSemplici.take(2),
+        _vociSemplici[2].copyWith(categoria: CategoriaInvestimento.crypto),
+      ];
+      final fotografie = FakeFotografieRepository(classificate);
       addTearDown(fotografie.close);
-      await pump(tester, _vociSemplici, fotografie);
+      await pump(tester, classificate, fotografie);
       fotografie.errore = StateError('offline');
       await tester.tap(find.byTooltip('Salva fotografia'));
       await tester.pumpAndSettle();
