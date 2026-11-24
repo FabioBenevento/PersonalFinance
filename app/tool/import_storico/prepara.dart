@@ -6,6 +6,7 @@ import 'package:personal_finance/domain/fotografia_mensile.dart';
 import 'package:personal_finance/domain/importo.dart';
 import 'package:personal_finance/domain/mese.dart';
 import 'package:personal_finance/domain/voce.dart';
+import 'package:personal_finance/domain/voci_iniziali.dart';
 
 import 'parser_foglio.dart';
 
@@ -89,7 +90,98 @@ Map<String, Object?> documenti(Preparazione p) => {
   for (final e in p.fotografie.entries) e.key: fotografiaToDocumento(e.value),
 };
 
-String scriviRevisione(Preparazione p, TabellaNomi tabella) {
+/// Saldo di una voce attuale; [righe] (ID riga → nome e saldo) solo per le voci con dettaglio.
+class SaldoVoce {
+  SaldoVoce(this.nome, this.saldo, [this.righe]);
+
+  final String nome;
+  final int saldo;
+  final Map<String, ({String nome, int saldo})>? righe;
+}
+
+int _importoPortafoglio(List r, String contesto) {
+  final testo = r.length > 1 ? '${r[1] ?? ''}' : '';
+  return leggiImporto(testo) ??
+      (throw PreparazioneException(
+        'Importo illeggibile "$testo" per "${r[0]}" ($contesto)',
+      ));
+}
+
+/// Saldi di oggi dal grezzo del foglio "Portafoglio" (`situazione` e `dettagli`
+/// per voce con dettaglio), per ID voce; ferma tutto se una voce o riga non è
+/// riconducibile alle voci attuali.
+Map<String, SaldoVoce> preparaSaldiOggi(
+  Map<String, dynamic> grezzo,
+  TabellaNomi tabella,
+) {
+  const dove = 'Portafoglio';
+  final attuali = {for (final v in vociIniziali) v.id: v};
+  final out = <String, SaldoVoce>{};
+  final dettagli = (grezzo['dettagli'] as Map? ?? {}).cast<String, List>();
+  for (final r in grezzo['situazione'] as List) {
+    final riga = (r as List).cast<Object?>();
+    final etichetta = riga.isEmpty ? '' : '${riga[0] ?? ''}'.trim();
+    if (etichetta.isEmpty || tabella.ignorata(etichetta)) continue;
+    final nome = tabella.voce(etichetta);
+    final voce = nome == null ? null : attuali[nome.id];
+    if (voce == null || voce.nome != nome!.nome) {
+      throw PreparazioneException(
+        'Voce non riconducibile "$etichetta" ($dove)',
+      );
+    }
+    if (voce.righe == null) {
+      out[voce.id] = SaldoVoce(voce.nome, _importoPortafoglio(riga, dove));
+      continue;
+    }
+    final righe = <String, ({String nome, int saldo})>{};
+    for (final d in dettagli[voce.nome] ?? const []) {
+      final dr = (d as List).cast<Object?>();
+      final n = dr.isEmpty ? '' : '${dr[0] ?? ''}'.trim();
+      final id = voce.righe!.where((x) => x.nome == n).firstOrNull?.id;
+      if (id == null) {
+        throw PreparazioneException(
+          'Riga non riconducibile "$n" di "${voce.nome}" ($dove)',
+        );
+      }
+      righe[id] = (
+        nome: n,
+        saldo: _importoPortafoglio(dr, '${voce.nome}, $dove'),
+      );
+    }
+    out[voce.id] = SaldoVoce(
+      voce.nome,
+      righe.values.fold(0, (a, r) => a + r.saldo),
+      righe,
+    );
+  }
+  for (final k in dettagli.keys) {
+    if (!out.values.any((v) => v.nome == k && v.righe != null)) {
+      throw PreparazioneException('Dettaglio non riconducibile "$k" ($dove)');
+    }
+  }
+  return out;
+}
+
+/// Documento `saldi_oggi.json`: ID voce → nome atteso e saldo (o righe).
+Map<String, Object?> documentoSaldiOggi(Map<String, SaldoVoce> saldi) => {
+  for (final e in saldi.entries)
+    e.key: {
+      'nome': e.value.nome,
+      if (e.value.righe == null)
+        'saldoCentesimi': e.value.saldo
+      else
+        'righe': {
+          for (final r in e.value.righe!.entries)
+            r.key: {'nome': r.value.nome, 'saldoCentesimi': r.value.saldo},
+        },
+    },
+};
+
+String scriviRevisione(
+  Preparazione p,
+  TabellaNomi tabella, [
+  Map<String, SaldoVoce>? saldiOggi,
+]) {
   final b =
       StringBuffer('# Revisione import storico\n\n## Tabella dei nomi\n\n')
         ..writeln('| Etichetta | Nome | Gruppo | Categoria |')
@@ -127,10 +219,25 @@ String scriviRevisione(Preparazione p, TabellaNomi tabella) {
   for (final e in p.saltati.entries) {
     b.writeln('- ${e.key}: ${e.value}');
   }
+  if (saldiOggi != null) {
+    b
+      ..writeln('\n## Saldi di oggi\n')
+      ..writeln('| Voce | Saldo |')
+      ..writeln('|---|---|');
+    for (final v in saldiOggi.values) {
+      b.writeln('| ${v.nome} | ${scriviImporto(v.saldo)} |');
+      for (final r in v.righe?.values ?? const <({String nome, int saldo})>[]) {
+        b.writeln('| - ${r.nome} | ${scriviImporto(r.saldo)} |');
+      }
+    }
+    b.writeln(
+      '\nTotale ${scriviImporto(saldiOggi.values.fold(0, (a, v) => a + v.saldo))}',
+    );
+  }
   return b.toString();
 }
 
-/// Legge `<base>/dati/grezzi` e scrive `fotografie.json` e `revisione.md` in `<base>/dati`.
+/// Legge `<base>/dati/grezzi` e scrive `fotografie.json`, `revisione.md` e, con `portafoglio.json`, `saldi_oggi.json` in `<base>/dati`.
 void preparaCartella(Directory base) {
   final tabella = TabellaNomi.fromJson(
     jsonDecode(File('${base.path}/tabella_nomi.json').readAsStringSync())
@@ -145,11 +252,22 @@ void preparaCartella(Directory base) {
     }
   }
   final p = preparaMesi(grezzi, tabella);
+  final port = File('${base.path}/dati/grezzi/portafoglio.json');
+  final saldi = port.existsSync()
+      ? preparaSaldiOggi(
+          jsonDecode(port.readAsStringSync()) as Map<String, dynamic>,
+          tabella,
+        )
+      : null;
   const enc = JsonEncoder.withIndent('  ');
   File('${base.path}/dati/fotografie.json')
       .writeAsStringSync(enc.convert(documenti(p)));
   File('${base.path}/dati/revisione.md')
-      .writeAsStringSync(scriviRevisione(p, tabella));
+      .writeAsStringSync(scriviRevisione(p, tabella, saldi));
+  if (saldi != null) {
+    File('${base.path}/dati/saldi_oggi.json')
+        .writeAsStringSync(enc.convert(documentoSaldiOggi(saldi)));
+  }
 }
 
 void main(List<String> args) {

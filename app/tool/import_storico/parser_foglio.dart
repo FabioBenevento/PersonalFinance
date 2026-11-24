@@ -48,6 +48,17 @@ class TabellaNomi {
       (e.key, e.value.nome, e.value.gruppo, e.value.categoria),
   ];
 
+  /// ID e nome della voce con questa etichetta, null se non è una voce.
+  ({String id, String nome})? voce(String etichetta) {
+    final v = _voci[etichetta];
+    return v == null ? null : (id: v.id, nome: v.nome);
+  }
+
+  /// Totale o riga da ignorare, che non è una voce.
+  bool ignorata(String etichetta) =>
+      !_voci.containsKey(etichetta) &&
+      (_totali.contains(etichetta) || _ignorare.any(etichetta.contains));
+
   final Map<String, _Nome> _voci;
   final Set<String> _totali;
   final List<String> _ignorare;

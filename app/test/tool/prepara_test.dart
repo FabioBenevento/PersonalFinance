@@ -44,7 +44,91 @@ Map<String, dynamic> ott2026() => {
   ],
 };
 
+Map<String, dynamic> portafoglio({String bwin = 'Bwin'}) => {
+  'situazione': [
+    ['Contanti', '€ 500,00'],
+    ['MatchBetting', '€ 72,07'],
+    ['Totale Liquidità', '€ 1,00'],
+    ['TFR lordo', '€ 9,00'],
+  ],
+  'dettagli': {
+    'MatchBetting': [
+      ['Betfair', '€ 70,00'],
+      [bwin, '€ 2,07'],
+    ],
+  },
+};
+
 void main() {
+  test('IMP-016 saldi di oggi con ID, nomi attesi e righe', () {
+    final t = TabellaNomi.fromJson({
+      'voci': {
+        'Contanti': {'id': 'v0', 'nome': 'Contanti', 'gruppo': 'salvadanaio'},
+        'MatchBetting': {
+          'id': 'v3',
+          'nome': 'MatchBetting',
+          'gruppo': 'salvadanaio',
+        },
+      },
+      'totali': ['Totale Liquidità'],
+      'ignorare': ['TFR'],
+    });
+    final s = preparaSaldiOggi(portafoglio(), t);
+    expect(documentoSaldiOggi(s), {
+      'v0': {'nome': 'Contanti', 'saldoCentesimi': 50000},
+      'v3': {
+        'nome': 'MatchBetting',
+        'righe': {
+          'v3-r0': {'nome': 'Betfair', 'saldoCentesimi': 7000},
+          'v3-r2': {'nome': 'Bwin', 'saldoCentesimi': 207},
+        },
+      },
+    });
+    expect(s['v3']!.saldo, 7207);
+    final r = scriviRevisione(Preparazione(), t, s);
+    expect(r, contains('| Contanti | € 500,00 |'));
+    expect(r, contains('| - Bwin | € 2,07 |'));
+    expect(r, contains('Totale € 572,07'));
+  });
+
+  test('IMP-017 voce o riga non riconducibile ferma la preparazione', () {
+    final t = TabellaNomi.fromJson({
+      'voci': {
+        'Contanti': {'id': 'v0', 'nome': 'Contanti', 'gruppo': 'salvadanaio'},
+        'MatchBetting': {
+          'id': 'v3',
+          'nome': 'MatchBetting',
+          'gruppo': 'salvadanaio',
+        },
+        'Hype': {'id': 's-hype', 'nome': 'Hype', 'gruppo': 'liquidita'},
+      },
+      'totali': ['Totale Liquidità'],
+      'ignorare': ['TFR'],
+    });
+    expect(
+      () => preparaSaldiOggi(portafoglio(bwin: 'Bwin2'), t),
+      throwsA(
+        isA<PreparazioneException>().having(
+          (e) => e.message,
+          'message',
+          contains('Bwin2'),
+        ),
+      ),
+    );
+    final g = portafoglio();
+    (g['situazione'] as List).add(['Hype', '€ 1,00']);
+    expect(
+      () => preparaSaldiOggi(g, t),
+      throwsA(
+        isA<PreparazioneException>().having(
+          (e) => e.message,
+          'message',
+          contains('Hype'),
+        ),
+      ),
+    );
+  });
+
   test('IMP-001 IMP-003 mesi preparati, senza differenze (IMP-011)', () {
     final p = preparaMesi({
       '2022-01': gen2022(),
