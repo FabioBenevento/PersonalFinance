@@ -33,6 +33,7 @@ class DettaglioPage extends ConsumerWidget {
     }
     final inAttesa =
         ref.watch(vociInAttesaProvider).value?.contains(voceId) ?? false;
+    final bloccato = ref.watch(operazioniBloccateProvider);
     return Scaffold(
       appBar: AppBar(
         title: FittedBox(
@@ -42,7 +43,7 @@ class DettaglioPage extends ConsumerWidget {
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _aggiungi(context, ref),
+        onPressed: bloccato ? null : () => _aggiungi(context, ref),
         label: const Text('Aggiungi riga'),
         icon: const Icon(Icons.add),
       ),
@@ -77,6 +78,7 @@ class DettaglioPage extends ConsumerWidget {
                 voceId,
                 (s) => s.eliminaRiga(voceId, r.id),
               ),
+              enabled: !bloccato,
             ),
         ],
       ),
@@ -175,12 +177,14 @@ class _RigaRow extends StatelessWidget {
     required this.onSaldo,
     required this.onRinomina,
     required this.onElimina,
+    required this.enabled,
   });
 
   final Riga riga;
   final Future<void> Function(int centesimi) onSaldo;
   final VoidCallback onRinomina;
   final VoidCallback onElimina;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) => Padding(
@@ -188,16 +192,20 @@ class _RigaRow extends StatelessWidget {
     child: Row(
       children: [
         Expanded(child: Text(riga.nome)),
-        SaldoEditor(saldoCentesimi: riga.saldoCentesimi, onSalva: onSaldo),
+        SaldoEditor(
+          saldoCentesimi: riga.saldoCentesimi,
+          onSalva: onSaldo,
+          enabled: enabled,
+        ),
         IconButton(
           tooltip: 'Rinomina ${riga.nome}',
           icon: const Icon(Icons.edit),
-          onPressed: onRinomina,
+          onPressed: enabled ? onRinomina : null,
         ),
         IconButton(
           tooltip: 'Elimina ${riga.nome}',
           icon: const Icon(Icons.delete),
-          onPressed: onElimina,
+          onPressed: enabled ? onElimina : null,
         ),
       ],
     ),

@@ -6,7 +6,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:personal_finance/data/firestore_fotografie_repository.dart';
 import 'package:personal_finance/data/fotografie_service.dart';
 import 'package:personal_finance/data/fotografie_repository.dart';
+import 'package:personal_finance/data/firestore_voci_repository.dart';
+import 'package:personal_finance/data/operazioni_coordinator.dart';
+import 'package:personal_finance/domain/fotografia_mensile.dart';
 import 'package:personal_finance/domain/mese.dart';
+import 'package:personal_finance/domain/voce.dart';
 
 import 'support/firebase_emulator_harness.dart';
 
@@ -56,4 +60,187 @@ void main() {
     );
     expect((await repo.leggi(foto.mese))!.revisione, 1);
   });
+
+  test(
+    'FOT-010 scrittura ed eliminazione offline precedono la lettura server',
+    () async {
+      await harness.firestore
+          .doc('users/${harness.uid}/fotografie/2026-11')
+          .delete();
+      final doc = harness.firestore.doc('users/${harness.uid}/voci/b');
+      await doc.set({
+        'nome': 'BBVA',
+        'tipo': 'semplice',
+        'gruppo': 'liquidita',
+        'ordine': 0,
+        'saldoCentesimi': 10000,
+      });
+      final eliminata = harness.firestore.doc('users/${harness.uid}/voci/c');
+      await eliminata.set({
+        'nome': 'Da eliminare',
+        'tipo': 'semplice',
+        'gruppo': 'liquidita',
+        'ordine': 1,
+        'saldoCentesimi': 5000,
+      });
+      await doc.get(const GetOptions(source: Source.server));
+      await eliminata.get(const GetOptions(source: Source.server));
+      final voci = FirestoreVociRepository(harness.uid, harness.firestore);
+      final coordinator = OperazioniCoordinator();
+      await harness.firestore.disableNetwork();
+      final scrittura = coordinator.modifica(
+        () => voci.salva(
+          const Voce.semplice(
+            id: 'b',
+            nome: 'BBVA',
+            gruppo: Gruppo.liquidita,
+            saldoCentesimi: 20000,
+          ),
+        ),
+      );
+      final eliminazione = coordinator.modifica(() => voci.elimina('c'));
+      final leaseFuture = coordinator.blocca();
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      expect(coordinator.bloccato, isTrue);
+      await harness.firestore.enableNetwork();
+      await Future.wait([scrittura, eliminazione]);
+      final lease = await leaseFuture;
+      final foto =
+          await FotografieService(
+            FirestoreFotografieRepository(harness.uid, harness.firestore),
+          ).salvaNuovo(
+            Mese(2026, 11),
+            oggi: DateTime(2026, 11, 23),
+            verificaOperazione: lease.verifica,
+          );
+      expect(foto.voci.map((voce) => voce.id), ['b']);
+      expect(foto.voci.single.saldoCentesimi, 20000);
+      expect(
+        (await eliminata.get(const GetOptions(source: Source.server))).exists,
+        isFalse,
+      );
+      lease.dispose();
+      await eliminata.delete();
+    },
+  );
+
+  test('FOT-012 offline non accoda la fotografia dopo il ripristino', () async {
+    await harness.firestore
+        .doc('users/${harness.uid}/fotografie/2026-11')
+        .delete();
+    final ref = harness.firestore.doc('users/${harness.uid}/voci/b');
+    await ref.set({
+      'nome': 'BBVA',
+      'tipo': 'semplice',
+      'gruppo': 'liquidita',
+      'ordine': 0,
+      'saldoCentesimi': 10000,
+    });
+    await ref.get(const GetOptions(source: Source.server));
+    final db = harness.firestore;
+    final repo = FirestoreFotografieRepository(harness.uid, db);
+    await db.disableNetwork();
+    await expectLater(
+      FotografieService(repo)
+          .salvaNuovo(Mese(2026, 11), oggi: DateTime(2026, 11, 23)),
+      throwsA(anything),
+    );
+    await db.enableNetwork();
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    expect(await repo.leggi(Mese(2026, 11)), isNull);
+    await ref.delete();
+  });
+
+  test(
+    'FOT-014 documento sovradimensionato preserva la fotografia precedente',
+    () async {
+      final repo = FirestoreFotografieRepository(
+        harness.uid,
+        harness.firestore,
+      );
+      final mese = Mese(2026, 10);
+      final precedente = await repo.crea(
+        FotografiaMensile(
+          mese: mese,
+          voci: const [
+            Voce.semplice(
+              id: 'precedente',
+              nome: 'Esistente',
+              gruppo: Gruppo.liquidita,
+            ),
+          ],
+        ),
+      );
+      final enorme = FotografiaMensile(
+        mese: mese,
+        voci: [
+          Voce.semplice(
+            id: 'grande',
+            nome: List.filled(1100000, 'x').join(),
+            gruppo: Gruppo.liquidita,
+          ),
+        ],
+      );
+      await expectLater(
+        repo.sostituisci(enorme, precedente),
+        throwsA(anything),
+      );
+      final riletta = await repo.leggi(mese);
+      expect(riletta!.revisione, precedente.revisione);
+      expect(riletta.voci.single.id, 'precedente');
+      await harness.firestore
+          .doc('users/${harness.uid}/fotografie/${mese.id}')
+          .delete();
+    },
+  );
+
+  test(
+    'FOT-008 FOT-009 sostituzione integrale e revisione condizionata',
+    () async {
+      final repo = FirestoreFotografieRepository(
+        harness.uid,
+        harness.firestore,
+      );
+      final mese = Mese(2026, 10);
+      final prima = await repo.crea(
+        FotografiaMensile(
+          mese: mese,
+          voci: [
+            Voce.conDettaglio(
+              id: 'da-rimuovere',
+              nome: 'Vecchia',
+              gruppo: Gruppo.liquidita,
+              righe: const [Riga(id: 'riga-vecchia', nome: 'Deposito')],
+            ),
+            const Voce.semplice(
+              id: 'altra',
+              nome: 'Altro',
+              gruppo: Gruppo.investimenti,
+            ),
+          ],
+        ),
+      );
+      final nuova = FotografiaMensile(
+        mese: mese,
+        voci: const [
+          Voce.semplice(id: 'rimasta', nome: 'Nuova', gruppo: Gruppo.liquidita),
+        ],
+      );
+      final salvata = await repo.sostituisci(nuova, prima);
+      final riletta = await repo.leggi(mese);
+      expect(
+        (await repo.osserva().first).where((foto) => foto.mese == mese),
+        hasLength(1),
+      );
+      expect(riletta!.revisione, 2);
+      expect(riletta.voci.map((voce) => voce.id), ['rimasta']);
+      expect(riletta.voci.single.nome, 'Nuova');
+      expect(salvata.voci.single.id, 'rimasta');
+      await expectLater(
+        repo.sostituisci(nuova, prima),
+        throwsA(isA<ConflittoFotografiaException>()),
+      );
+      expect((await repo.leggi(mese))!.revisione, 2);
+    },
+  );
 }

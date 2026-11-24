@@ -13,4 +13,8 @@ abstract interface class FotografieRepository {
   Future<void> attendiSincronizzazione();
   Future<List<Voce>> acquisisciVoci();
   Future<FotografiaMensile> crea(FotografiaMensile fotografia);
+  Future<FotografiaMensile> sostituisci(
+    FotografiaMensile fotografia,
+    FotografiaMensile attesa,
+  );
 }

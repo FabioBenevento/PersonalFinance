@@ -79,4 +79,36 @@ class FirestoreFotografieRepository implements FotografieRepository {
     // La rilettura esplicita restituisce anche il timestamp risolto dal server.
     return (await leggi(fotografia.mese))!;
   }
+
+  @override
+  Future<FotografiaMensile> sostituisci(
+    FotografiaMensile fotografia,
+    FotografiaMensile attesa,
+  ) async {
+    final ref = _fotografie.doc(fotografia.mese.id);
+    FotografiaMensile? conflitto;
+    await _db.runTransaction<void>((transaction) async {
+      conflitto = null;
+      final snapshot = await transaction.get(ref);
+      if (!snapshot.exists ||
+          snapshot.data()!['revisione'] != attesa.revisione) {
+        conflitto = snapshot.exists
+            ? fotografiaFromMap(snapshot.id, snapshot.data()!)
+            : attesa;
+        return;
+      }
+      transaction.set(
+        ref,
+        fotografiaToMap(
+          FotografiaMensile(
+            mese: fotografia.mese,
+            voci: fotografia.voci,
+            revisione: attesa.revisione + 1,
+          ),
+        ),
+      );
+    });
+    if (conflitto != null) throw ConflittoFotografiaException(conflitto!);
+    return (await leggi(fotografia.mese))!;
+  }
 }

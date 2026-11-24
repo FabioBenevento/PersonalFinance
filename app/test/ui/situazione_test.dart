@@ -5,11 +5,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personal_finance/auth/auth.dart';
 import 'package:personal_finance/data/voci_providers.dart';
+import 'package:personal_finance/data/fotografie_providers.dart';
 import 'package:personal_finance/domain/voce.dart';
 import 'package:personal_finance/domain/voci_iniziali.dart';
 import 'package:personal_finance/main.dart';
 
 import '../data/fake_voci_repository.dart';
+import '../data/fake_fotografie_repository.dart';
 
 class _Gateway implements AuthGateway {
   @override
@@ -34,13 +36,22 @@ const _vociSemplici = [
 Future<FakeVociRepository> pump(
   WidgetTester tester, [
   List<Voce> voci = _vociSemplici,
+  FakeFotografieRepository? fotografie,
 ]) async {
+  if ((tester.view.physicalSize / tester.view.devicePixelRatio) ==
+      const Size(800, 600)) {
+    tester.view.physicalSize = const Size(1000, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+  }
   final repo = FakeVociRepository(voci);
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
         authGatewayProvider.overrideWithValue(_Gateway()),
         vociRepositoryProvider.overrideWithValue(repo),
+        if (fotografie != null)
+          fotografieRepositoryProvider.overrideWithValue(fotografie),
       ],
       child: const PersonalFinanceApp(),
     ),
@@ -65,7 +76,7 @@ void main() {
     ];
     expect(y, [...y]..sort());
     expect(find.text('€ 0,00  —'), findsNWidgets(3));
-    expect(find.text('€ 0,00'), findsNWidgets(4));
+    expect(find.text('€ 0,00'), findsNWidgets(5));
   });
 
   testWidgets('SIT-005 modifica del saldo', (tester) async {
@@ -73,7 +84,7 @@ void main() {
     await scrivi(tester, '4.276,69');
     expect(find.widgetWithText(TextField, '€ 4.276,69'), findsOneWidget);
     expect(find.text('€ 4.276,69  100,00%'), findsOneWidget);
-    expect(find.text('€ 4.276,69'), findsNWidgets(2));
+    expect(find.text('€ 4.276,69'), findsNWidgets(3));
   });
 
   testWidgets(
@@ -127,6 +138,30 @@ void main() {
     expect(find.text('In attesa di sincronizzazione'), findsNothing);
     expect(find.widgetWithText(TextField, '€ 4.276,69'), findsOneWidget);
   });
+
+  testWidgets(
+    'FOT-014 errore di salvataggio ripristina controlli e consente retry',
+    (tester) async {
+      final fotografie = FakeFotografieRepository(_vociSemplici);
+      addTearDown(fotografie.close);
+      await pump(tester, _vociSemplici, fotografie);
+      fotografie.errore = StateError('offline');
+      await tester.tap(find.byTooltip('Salva fotografia'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Salva'));
+      await tester.pumpAndSettle();
+      expect(find.text('Fotografia non salvata, riprova'), findsOneWidget);
+      expect(find.text('Salvataggio in corso'), findsNothing);
+      expect(fotografie.fotografie, isEmpty);
+
+      fotografie.errore = null;
+      await tester.tap(find.byTooltip('Salva fotografia'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Salva'));
+      await tester.pumpAndSettle();
+      expect(fotografie.fotografie.keys, ['2026-11']);
+    },
+  );
 
   const p2p = Voce.conDettaglio(
     id: 'p',
@@ -322,6 +357,12 @@ void main() {
         ],
       ),
     ]);
+    await tester.scrollUntilVisible(
+      find.text('Deposito Titoli – Scalable Capital'),
+      150,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Deposito Titoli – Scalable Capital'));
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);

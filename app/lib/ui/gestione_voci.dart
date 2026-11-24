@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/voci_providers.dart';
+import '../data/operazioni_coordinator.dart';
 import '../domain/importo.dart';
 import '../domain/situazione.dart';
 import '../domain/voce.dart';
@@ -24,6 +25,12 @@ Future<void> esegui(BuildContext context, Future<void> Function() f) async {
     messenger.showSnackBar(
       const SnackBar(content: Text('Modifica non salvata, riprova')),
     );
+  } on ModificheBloccateException {
+    messenger.showSnackBar(
+      const SnackBar(
+        content: Text('Attendi il completamento della fotografia'),
+      ),
+    );
   }
 }
 
@@ -35,15 +42,17 @@ Future<void> modificaVoce(
   WidgetRef ref,
   String voceId,
   Situazione Function(Situazione) f,
-) => esegui(
-  context,
-  () => ref
-      .read(vociRepositoryProvider)
-      .salva(
-        f(Situazione(ref.read(vociProvider).value ?? const [])).voci
-            .firstWhere((v) => v.id == voceId),
-      ),
-);
+) => esegui(context, () {
+  final coordinator = ref.read(operazioniCoordinatorProvider);
+  return coordinator.modifica(
+    () => ref
+        .read(vociRepositoryProvider)
+        .salva(
+          f(Situazione(ref.read(vociProvider).value ?? const [])).voci
+              .firstWhere((v) => v.id == voceId),
+        ),
+  );
+});
 
 /// Asks for a name; null if cancelled.
 Future<String?> chiediNome(
@@ -240,6 +249,8 @@ Future<void> eliminaVoce(BuildContext context, WidgetRef ref, Voce voce) async {
   if (ok != true || !context.mounted) return;
   await esegui(
     context,
-    () => ref.read(vociRepositoryProvider).elimina(voce.id),
+    () => ref
+        .read(operazioniCoordinatorProvider)
+        .modifica(() => ref.read(vociRepositoryProvider).elimina(voce.id)),
   );
 }

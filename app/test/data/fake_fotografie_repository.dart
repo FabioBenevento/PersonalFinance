@@ -69,5 +69,28 @@ class FakeFotografieRepository implements FotografieRepository {
     return salvata;
   }
 
+  @override
+  Future<FotografiaMensile> sostituisci(
+    FotografiaMensile fotografia,
+    FotografiaMensile attesa,
+  ) async {
+    chiamate.add('sostituisci');
+    _check();
+    primaDiCreare?.call();
+    final attuale = fotografie[fotografia.mese.id];
+    if (attuale == null || attuale.revisione != attesa.revisione) {
+      throw ConflittoFotografiaException(attuale ?? attesa);
+    }
+    final salvata = FotografiaMensile(
+      mese: fotografia.mese,
+      voci: fotografia.voci,
+      revisione: attuale.revisione + 1,
+      salvataIl: DateTime.utc(2026, 11, 23),
+    );
+    fotografie[fotografia.mese.id] = salvata;
+    _changes.add(null);
+    return salvata;
+  }
+
   Future<void> close() => _changes.close();
 }

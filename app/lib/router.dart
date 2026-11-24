@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'auth/auth.dart';
 import 'data/voci_providers.dart';
 import 'ui/accesso_page.dart';
+import 'ui/fotografie_page.dart';
 import 'ui/situazione_page.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -22,6 +23,12 @@ final routerProvider = Provider<GoRouter>((ref) {
     },
     routes: [
       GoRoute(path: '/', builder: (_, _) => const _Avvio()),
+      GoRoute(path: '/fotografie', builder: (_, _) => const FotografiePage()),
+      GoRoute(
+        path: '/fotografie/:mese',
+        builder: (_, state) =>
+            FotografiePage(meseId: state.pathParameters['mese']),
+      ),
       GoRoute(path: '/accesso', builder: (_, _) => const AccessoPage()),
     ],
   );

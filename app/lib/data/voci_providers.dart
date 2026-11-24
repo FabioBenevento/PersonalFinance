@@ -5,6 +5,7 @@ import '../domain/voce.dart';
 import '../domain/voci_iniziali.dart';
 import 'firestore_voci_repository.dart';
 import 'inizializzazione_service.dart';
+import 'operazioni_coordinator.dart';
 import 'voci_repository.dart';
 
 /// Repository of the signed-in user's voci; overridden with a fake in widget tests.
@@ -12,6 +13,29 @@ final vociRepositoryProvider = Provider<VociRepository>((ref) {
   final auth = ref.watch(authStateProvider).value;
   if (auth is! Allowed) throw StateError('Utente non autorizzato');
   return FirestoreVociRepository(auth.uid);
+});
+
+final operazioniBloccateProvider = NotifierProvider<_BloccoNotifier, bool>(
+  _BloccoNotifier.new,
+);
+
+class _BloccoNotifier extends Notifier<bool> {
+  @override
+  bool build() => false;
+
+  void aggiorna(bool value) => state = value;
+}
+
+final operazioniCoordinatorProvider = Provider<OperazioniCoordinator>((ref) {
+  final coordinator = OperazioniCoordinator(
+    onBloccoCambiato: (bloccato) =>
+        ref.read(operazioniBloccateProvider.notifier).aggiorna(bloccato),
+  );
+  String? uid(AuthState? state) => state is Allowed ? state.uid : null;
+  ref.listen(authStateProvider, (prima, dopo) {
+    if (uid(prima?.value) != uid(dopo.value)) coordinator.invalida();
+  });
+  return coordinator;
 });
 
 final vociProvider = StreamProvider<List<Voce>>(

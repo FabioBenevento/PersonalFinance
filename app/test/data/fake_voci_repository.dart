@@ -19,6 +19,8 @@ class FakeVociRepository implements VociRepository {
 
   /// Called with every voce passed to [salva].
   void Function(Voce)? suSalva;
+  Future<void>? primaDiSalva;
+  Future<void>? primaDiEliminare;
   final _inAttesa = StreamController<Set<String>>.broadcast();
   Set<String> _attesa = {};
   var _contatore = 0;
@@ -57,20 +59,25 @@ class FakeVociRepository implements VociRepository {
   }
 
   @override
-  Future<void> salva(Voce voce) async => _scrivi(() {
-    suSalva?.call(voce);
-    final i = _voci.indexWhere((v) => v.id == voce.id);
-    if (i >= 0 && _voci[i].gruppo == voce.gruppo) {
-      _voci[i] = voce;
-    } else {
-      if (i >= 0) _voci.removeAt(i);
-      _voci.add(voce);
-    }
-  });
+  Future<void> salva(Voce voce) async {
+    await primaDiSalva;
+    _scrivi(() {
+      suSalva?.call(voce);
+      final i = _voci.indexWhere((v) => v.id == voce.id);
+      if (i >= 0 && _voci[i].gruppo == voce.gruppo) {
+        _voci[i] = voce;
+      } else {
+        if (i >= 0) _voci.removeAt(i);
+        _voci.add(voce);
+      }
+    });
+  }
 
   @override
-  Future<void> elimina(String id) async =>
-      _scrivi(() => _voci.removeWhere((v) => v.id == id));
+  Future<void> elimina(String id) async {
+    await primaDiEliminare;
+    _scrivi(() => _voci.removeWhere((v) => v.id == id));
+  }
 
   @override
   Future<bool> inizializzato() async => _inizializzato;
