@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:personal_finance/data/fotografia_documento.dart';
-import 'package:personal_finance/data/fotografia_mapper.dart';
 import 'package:personal_finance/domain/fotografia_mensile.dart';
 import 'package:personal_finance/domain/importo.dart';
 import 'package:personal_finance/domain/mese.dart';
@@ -65,8 +64,9 @@ Preparazione preparaMesi(
     }
     final f = FotografiaMensile(mese: mese, voci: foglio.voci);
     final s = f.situazione;
-    // Ogni documento generato deve essere rileggibile dall'app.
-    fotografiaFromMap(id, jsonDecode(jsonEncode(fotografiaToDocumento(f))));
+    if (!s.classificazioneCompleta) {
+      throw PreparazioneException('Investimenti non classificati ($id)');
+    }
     for (final e in foglio.totali.entries) {
       final l = e.key.toLowerCase();
       final gruppo = Gruppo.values
