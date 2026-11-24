@@ -7,7 +7,7 @@ class ConflittoFotografiaException implements Exception {
   final FotografiaMensile attuale;
 }
 
-/// Almeno una voce degli Investimenti è senza categoria: nessuna fotografia.
+/// At least one Investimenti voce has no categoria: no fotografia is saved.
 class ClassificazioneIncompletaException implements Exception {
   const ClassificazioneIncompletaException();
 }

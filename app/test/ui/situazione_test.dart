@@ -986,6 +986,47 @@ void inizializzazioneTests() {
     },
   );
 
+  testWidgets('CAT-012 durante il nuovo tentativo compare lo stato in corso', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1000, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final repo = FakeVociRepository(const [
+      Voce.semplice(
+        id: 'v20',
+        nome: 'Pensionline',
+        gruppo: Gruppo.investimenti,
+        saldoCentesimi: 50000,
+      ),
+    ]);
+    final primo = Completer<void>();
+    repo.primaDiClassificare = primo.future;
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authGatewayProvider.overrideWithValue(_Gateway()),
+          vociRepositoryProvider.overrideWithValue(repo),
+        ],
+        child: const PersonalFinanceApp(),
+      ),
+    );
+    for (var i = 0; i < 5; i++) {
+      await tester.pump();
+    }
+    primo.completeError(Exception('rete'));
+    await tester.pumpAndSettle();
+    final nuovo = Completer<void>();
+    repo.primaDiClassificare = nuovo.future;
+    await tester.tap(find.text('Riprova classificazione'));
+    await tester.pump();
+    await tester.pump();
+    expect(find.text('Classificazione automatica in corso…'), findsOneWidget);
+    expect(find.text('Classificazione automatica non riuscita'), findsNothing);
+    nuovo.complete();
+    await tester.pumpAndSettle();
+  });
+
   testWidgets(
     'SIT-022 primo accesso: 24 voci a zero, indicatore durante il caricamento',
     (tester) async {

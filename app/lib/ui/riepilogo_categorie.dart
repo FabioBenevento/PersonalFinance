@@ -4,7 +4,7 @@ import '../domain/importo.dart';
 import '../domain/situazione.dart';
 import '../domain/voce.dart';
 import 'app_theme.dart';
-import 'gestione_voci.dart';
+import 'etichette.dart';
 
 class RiepilogoCategorie extends StatelessWidget {
   const RiepilogoCategorie({

@@ -8,6 +8,7 @@ import '../domain/importo.dart';
 import '../domain/situazione.dart';
 import '../domain/voce.dart';
 import 'dettaglio_page.dart';
+import 'etichette.dart';
 import 'gestione_voci.dart';
 import 'saldo_editor.dart';
 import 'salva_fotografia.dart';
@@ -197,7 +198,7 @@ class _StatoMigrazione extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) =>
       switch (ref.watch(migrazioneCategorieProvider)) {
         AsyncData() => const SizedBox.shrink(),
-        AsyncError() => Padding(
+        AsyncError(isLoading: false) => Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
           child: Wrap(
             crossAxisAlignment: WrapCrossAlignment.center,

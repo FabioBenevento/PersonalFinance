@@ -8,7 +8,7 @@ import '../domain/importo.dart';
 import '../domain/mese.dart';
 import '../domain/voce.dart';
 import 'app_theme.dart';
-import 'gestione_voci.dart' show nomiGruppo;
+import 'etichette.dart';
 import 'patrimonio_layout.dart';
 import 'riepilogo_categorie.dart';
 import 'salva_fotografia.dart';

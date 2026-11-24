@@ -7,19 +7,7 @@ import '../data/operazioni_coordinator.dart';
 import '../domain/importo.dart';
 import '../domain/situazione.dart';
 import '../domain/voce.dart';
-
-const nomiGruppo = {
-  Gruppo.salvadanaio: 'Salvadanaio',
-  Gruppo.liquidita: 'Liquidità',
-  Gruppo.investimenti: 'Investimenti',
-};
-
-const nomiCategoria = {
-  CategoriaInvestimento.pianiAccumulo: 'Piani accumulo',
-  CategoriaInvestimento.p2pLanding: 'P2P Landing',
-  CategoriaInvestimento.depositoTitoli: 'Deposito Titoli',
-  CategoriaInvestimento.crypto: 'Crypto',
-};
+import 'etichette.dart';
 
 Future<void> cambiaCategoria(
   BuildContext context,
@@ -143,16 +131,18 @@ class _NomeDialogState extends State<_NomeDialog> {
   );
 }
 
+typedef NuovaVoce = ({
+  String nome,
+  Gruppo gruppo,
+  bool dettaglio,
+  CategoriaInvestimento? categoria,
+});
+
 Future<void> aggiungiVoce(BuildContext context, WidgetRef ref) async {
-  final nuova =
-      await showDialog<
-        ({
-          String nome,
-          Gruppo gruppo,
-          bool dettaglio,
-          CategoriaInvestimento? categoria,
-        })
-      >(context: context, builder: (_) => const _NuovaVoceDialog());
+  final nuova = await showDialog<NuovaVoce>(
+    context: context,
+    builder: (_) => const _NuovaVoceDialog(),
+  );
   if (nuova == null || !context.mounted) return;
   final id = ref.read(vociRepositoryProvider).nuovoId();
   final voce = nuova.dettaglio

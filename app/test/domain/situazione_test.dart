@@ -318,6 +318,20 @@ void _operazioni() {
     },
   );
 
+  test('CAT-001 aggiungiVoce fuori dagli Investimenti scarta la categoria', () {
+    for (final g in [Gruppo.salvadanaio, Gruppo.liquidita]) {
+      final r = base().aggiungiVoce(
+        Voce.semplice(
+          id: 'n',
+          nome: 'Nuova',
+          gruppo: g,
+          categoria: CategoriaInvestimento.crypto,
+        ),
+      );
+      expect(r.voci.firstWhere((v) => v.id == 'n').categoria, isNull);
+    }
+  });
+
   test('SIT-012 nome di voce non valido', () {
     final s = base();
     expect(() => s.aggiungiVoce(_v('', Gruppo.liquidita, 0)), rifiuta());

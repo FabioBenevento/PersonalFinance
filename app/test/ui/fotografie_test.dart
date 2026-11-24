@@ -203,6 +203,44 @@ void main() {
     expect(repo.fotografie.keys, ['2026-11']);
   });
 
+  for (final schema in [1, 2]) {
+    testWidgets(
+      'CAT-016 sostituzione bloccata con fotografia schema $schema e comandi ripristinati',
+      (tester) async {
+        const incompleta = Voce.semplice(
+          id: 'z',
+          nome: 'Nuova',
+          gruppo: Gruppo.investimenti,
+          saldoCentesimi: 100,
+        );
+        final repo = FakeFotografieRepository([incompleta]);
+        final mese = Mese(2026, 11);
+        repo.fotografie[mese.id] = FotografiaMensile(
+          mese: mese,
+          voci: const [],
+          versioneSchema: schema,
+        );
+        await pump(tester, repo);
+        await tester.tap(find.byTooltip('Salva fotografia'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Salva'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Sostituisci'));
+        await tester.pumpAndSettle();
+        expect(repo.chiamate, isNot(contains('sostituisci')));
+        expect(repo.fotografie[mese.id]!.voci, isEmpty);
+        expect(
+          find.textContaining('classifica prima tutte le voci'),
+          findsOneWidget,
+        );
+        expect(find.text('Fotografia non salvata, riprova'), findsNothing);
+        await tester.tap(find.byTooltip('Salva fotografia'));
+        await tester.pumpAndSettle();
+        expect(find.text('Salva'), findsOneWidget);
+      },
+    );
+  }
+
   testWidgets('FOT-001 mese corrente e successo solo dopo conferma', (
     tester,
   ) async {

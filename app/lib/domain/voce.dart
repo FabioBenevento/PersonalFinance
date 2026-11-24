@@ -67,21 +67,24 @@ class Voce {
     List<Riga>? righe,
     CategoriaInvestimento? categoria,
     bool rimuoviCategoria = false,
-  }) => conDettaglio
-      ? Voce.conDettaglio(
-          id: id,
-          nome: nome ?? this.nome,
-          gruppo: gruppo ?? this.gruppo,
-          categoria: rimuoviCategoria ? null : categoria ?? this.categoria,
-          righe: righe ?? this.righe!,
-        )
-      : Voce.semplice(
-          id: id,
-          nome: nome ?? this.nome,
-          gruppo: gruppo ?? this.gruppo,
-          categoria: rimuoviCategoria ? null : categoria ?? this.categoria,
-          saldoCentesimi: _saldoSemplice,
-        );
+  }) {
+    final cat = rimuoviCategoria ? null : categoria ?? this.categoria;
+    return conDettaglio
+        ? Voce.conDettaglio(
+            id: id,
+            nome: nome ?? this.nome,
+            gruppo: gruppo ?? this.gruppo,
+            categoria: cat,
+            righe: righe ?? this.righe!,
+          )
+        : Voce.semplice(
+            id: id,
+            nome: nome ?? this.nome,
+            gruppo: gruppo ?? this.gruppo,
+            categoria: cat,
+            saldoCentesimi: _saldoSemplice,
+          );
+  }
 
   /// Vero se il saldo è la somma delle righe.
   bool get conDettaglio => righe != null;

@@ -53,7 +53,15 @@ class Situazione {
       );
     }
     final nome = _nomeValido(v.nome, voci.map((x) => x.nome), 'voce');
-    return Situazione(_inFondoAlGruppo(voci, v.copyWith(nome: nome)));
+    return Situazione(
+      _inFondoAlGruppo(
+        voci,
+        v.copyWith(
+          nome: nome,
+          rimuoviCategoria: v.gruppo != Gruppo.investimenti,
+        ),
+      ),
+    );
   }
 
   Situazione rinominaVoce(String id, String nome) {

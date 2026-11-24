@@ -14,7 +14,7 @@ class FotografieService {
     void Function()? verificaOperazione,
   }) async {
     mese.valida(oggi);
-    // La lettura server verifica la connessione prima dell'attesa delle scritture.
+    // The server read verifies the connection before waiting for the writes.
     final attuale = await _repo.leggi(mese);
     if (attuale != null) throw ConflittoFotografiaException(attuale);
     await _repo.attendiSincronizzazione();
@@ -42,7 +42,7 @@ class FotografieService {
     return _repo.sostituisci(FotografiaMensile(mese: mese, voci: voci), attesa);
   }
 
-  // Controllo sui dati server appena acquisiti, prima di qualsiasi scrittura.
+  // Check on the freshly acquired server data, before any write.
   void _richiediClassificazione(List<Voce> voci) {
     if (!Situazione(voci).classificazioneCompleta) {
       throw const ClassificazioneIncompletaException();

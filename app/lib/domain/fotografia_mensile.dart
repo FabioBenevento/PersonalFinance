@@ -2,7 +2,7 @@ import 'mese.dart';
 import 'situazione.dart';
 import 'voce.dart';
 
-/// Schema 1: senza categorie (sola lettura); schema 2: categorie esplicite.
+/// Schema 1: no categorie (read-only); schema 2: explicit categorie.
 const schemaPrecedente = 1;
 const schemaConCategorie = 2;
 
