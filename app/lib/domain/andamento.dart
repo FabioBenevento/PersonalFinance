@@ -71,3 +71,94 @@ PuntoMensile _punto(Mese mese, FotografiaMensile? f) {
         : null,
   );
 }
+
+typedef Quota = ({int importo, int? percentuale});
+
+/// Importi e percentuali (centesimi di punto) di gruppi e categorie; [categorie]
+/// è null per le fotografie di schema 1.
+class Composizione {
+  const Composizione({required this.gruppi, this.categorie});
+
+  final Map<Gruppo, Quota> gruppi;
+  final Map<CategoriaInvestimento, Quota>? categorie;
+}
+
+Composizione composizione(FotografiaMensile f) {
+  final s = f.situazione;
+  return Composizione(
+    gruppi: {
+      for (final g in Gruppo.values)
+        g: (importo: s.totaleGruppo(g), percentuale: s.percentualeGruppo(g)),
+    },
+    categorie: f.haCategorie
+        ? {
+            for (final c in CategoriaInvestimento.values)
+              c: (
+                importo: s.totaleCategoria(c),
+                percentuale: s.percentualeCategoria(c),
+              ),
+          }
+        : null,
+  );
+}
+
+/// Confronto del Totale con [confronto]; [differenza] e [percentuale] sono null
+/// se manca la fotografia ([mancante]); [percentuale] anche con base zero.
+class Variazione {
+  const Variazione({
+    required this.confronto,
+    this.differenza,
+    this.percentuale,
+  });
+
+  final Mese confronto;
+  final int? differenza;
+  final int? percentuale;
+
+  bool get mancante => differenza == null;
+}
+
+class VariazioniTotale {
+  const VariazioniTotale({
+    required this.precedente,
+    required this.gennaio,
+    required this.annoPrecedente,
+  });
+
+  final Variazione precedente;
+  final Variazione gennaio;
+  final Variazione annoPrecedente;
+}
+
+/// Variazioni del Totale dell'ultima fotografia; null senza fotografie.
+VariazioniTotale? variazioni(List<FotografiaMensile> fotografie) {
+  if (fotografie.isEmpty) return null;
+  final ultima = fotografie.reduce(
+    (a, b) => a.mese.compareTo(b.mese) >= 0 ? a : b,
+  );
+  final m = ultima.mese;
+  final totale = ultima.situazione.totale;
+  Variazione confronta(Mese c) {
+    final base = fotografie
+        .where((f) => f.mese == c)
+        .map((f) => f.situazione.totale)
+        .firstOrNull;
+    if (base == null) return Variazione(confronto: c);
+    final diff = totale - base;
+    return Variazione(
+      confronto: c,
+      differenza: diff,
+      percentuale: base == 0
+          ? null
+          : (diff.sign *
+                ((diff.abs() * 20000 + base.abs()) ~/ (2 * base.abs())) *
+                base.sign),
+    );
+  }
+
+  return VariazioniTotale(
+    precedente: confronta(_daIndice(_indice(m) - 1)),
+    gennaio: confronta(Mese(m.anno, 1)),
+    annoPrecedente: confronta(Mese(m.anno - 1, m.mese)),
+  );
+}

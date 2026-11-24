@@ -106,4 +106,75 @@ void main() {
     expect(p.categorie, isNull);
     expect(p.totale, 1500);
   });
+
+  test(
+    'composizione con importi e percentuali, categorie assenti in schema 1',
+    () {
+      final f = foto(
+        2026,
+        11,
+        salvadanaio: 1000,
+        liquidita: 3000,
+        inv: [6000, 0, 0, 0],
+      );
+      final c = composizione(f);
+      expect(c.gruppi[Gruppo.investimenti], (importo: 6000, percentuale: 6000));
+      expect(c.gruppi[Gruppo.salvadanaio], (importo: 1000, percentuale: 1000));
+      expect(c.categorie![CategoriaInvestimento.values[0]], (
+        importo: 6000,
+        percentuale: 10000,
+      ));
+      expect(
+        composizione(foto(2026, 11, schema: schemaPrecedente)).categorie,
+        isNull,
+      );
+    },
+  );
+
+  test('AND-013 variazioni calcolate', () {
+    final v = variazioni([
+      foto(2026, 11, liquidita: 17149361),
+      foto(2026, 10, liquidita: 17000000),
+      foto(2026, 1, liquidita: 16000000),
+    ])!;
+    expect(v.precedente.confronto, Mese(2026, 10));
+    expect(v.precedente.differenza, 149361);
+    expect(v.precedente.percentuale, 88);
+    expect(v.gennaio.differenza, 1149361);
+    expect(v.annoPrecedente.mancante, isTrue);
+    expect(v.annoPrecedente.confronto, Mese(2025, 11));
+    expect(v.annoPrecedente.differenza, isNull);
+  });
+
+  test('AND-014 mese di confronto mancante', () {
+    final v = variazioni([foto(2026, 9, liquidita: 100)])!;
+    expect(v.precedente.confronto, Mese(2026, 8));
+    expect(v.precedente.mancante, isTrue);
+    expect(v.precedente.differenza, isNull);
+    expect(v.precedente.percentuale, isNull);
+  });
+
+  test('AND-015 gennaio come ultima fotografia', () {
+    final v = variazioni([
+      foto(2026, 1, liquidita: 100),
+      foto(2025, 12, liquidita: 50),
+    ])!;
+    expect([v.gennaio.differenza, v.gennaio.percentuale], [0, 0]);
+    expect(v.precedente.confronto, Mese(2025, 12));
+    expect(v.precedente.differenza, 50);
+  });
+
+  test(
+    'variazioni: base zero senza percentuale, negativa, nessuna fotografia',
+    () {
+      final v = variazioni([foto(2026, 2, liquidita: 100), foto(2026, 1)])!;
+      expect([v.precedente.differenza, v.precedente.percentuale], [100, null]);
+      final n = variazioni([
+        foto(2026, 2, liquidita: 9900),
+        foto(2026, 1, liquidita: 10000),
+      ])!;
+      expect([n.precedente.differenza, n.precedente.percentuale], [-100, -100]);
+      expect(variazioni([]), isNull);
+    },
+  );
 }
