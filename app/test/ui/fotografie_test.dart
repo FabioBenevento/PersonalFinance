@@ -63,7 +63,92 @@ Future<FakeVociRepository> pump(
   return voci;
 }
 
+const _investiti = [
+  Voce.semplice(
+    id: 'e',
+    nome: 'ETF',
+    gruppo: Gruppo.investimenti,
+    categoria: CategoriaInvestimento.depositoTitoli,
+    saldoCentesimi: 70000,
+  ),
+  Voce.semplice(
+    id: 'k',
+    nome: 'Coin',
+    gruppo: Gruppo.investimenti,
+    categoria: CategoriaInvestimento.crypto,
+    saldoCentesimi: 30000,
+  ),
+];
+
 void main() {
+  testWidgets('CAT-013 riepilogo storico indipendente dai dati attuali', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final repo = FakeFotografieRepository(_investiti);
+    final mese = Mese(2026, 11);
+    repo.fotografie[mese.id] = FotografiaMensile(mese: mese, voci: _investiti);
+    final voci = await pump(tester, repo);
+    await voci.salva(
+      _investiti[0].copyWith(categoria: CategoriaInvestimento.p2pLanding),
+    );
+    await voci.elimina('k');
+    await tester.tap(find.byTooltip('Fotografie mensili'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Novembre 2026'));
+    await tester.pumpAndSettle();
+    await tester.dragUntilVisible(
+      find.byKey(const ValueKey('riepilogo-categorie')),
+      find.byType(ListView).last,
+      const Offset(0, -200),
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey(CategoriaInvestimento.depositoTitoli)),
+        matching: find.textContaining('700,00'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey(CategoriaInvestimento.crypto)),
+        matching: find.textContaining('300,00'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Classificazione incompleta'), findsNothing);
+  });
+
+  testWidgets('CAT-014 schema 1 mostra il riepilogo non disponibile', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final repo = FakeFotografieRepository(_investiti);
+    final mese = Mese(2026, 11);
+    repo.fotografie[mese.id] = FotografiaMensile(
+      mese: mese,
+      voci: _investiti,
+      versioneSchema: 1,
+    );
+    await pump(tester, repo);
+    await tester.tap(find.byTooltip('Fotografie mensili'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Novembre 2026'));
+    await tester.pumpAndSettle();
+    await tester.dragUntilVisible(
+      find.text('Riepilogo per categoria non disponibile'),
+      find.byType(ListView).last,
+      const Offset(0, -200),
+    );
+    expect(find.byKey(const ValueKey('riepilogo-categorie')), findsNothing);
+    expect(find.text('ETF'), findsOneWidget);
+    expect(repo.chiamate, isEmpty);
+  });
+
   testWidgets('FOT-010 acquisizione aspetta la scrittura iniziata dal blur', (
     tester,
   ) async {

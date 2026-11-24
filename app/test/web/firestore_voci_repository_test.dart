@@ -5,11 +5,8 @@ import 'dart:collection';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:personal_finance/data/firestore_fotografie_repository.dart';
 import 'package:personal_finance/data/firestore_voci_repository.dart';
-import 'package:personal_finance/data/fotografie_service.dart';
 import 'package:personal_finance/data/inizializzazione_service.dart';
-import 'package:personal_finance/domain/mese.dart';
 import 'package:personal_finance/domain/situazione.dart';
 import 'package:personal_finance/domain/voce.dart';
 
@@ -182,12 +179,19 @@ void main() {
     await col.doc('v16').set(voce('Spostata', 'liquidita', 2));
     await col.doc('x1').set(voce('Pensionline', 'investimenti', 3));
     final repo = FirestoreVociRepository(harness.uid, harness.firestore);
-    final foto = await FotografieService(
-      FirestoreFotografieRepository(harness.uid, harness.firestore),
-    ).salvaNuovo(Mese(2026, 11), oggi: DateTime(2026, 11, 23));
+    // Fotografia schema 1 preesistente: le voci non classificate sono lecite.
     final fotoRef = harness.firestore.doc(
-      'users/${harness.uid}/fotografie/${foto.mese.id}',
+      'users/${harness.uid}/fotografie/2026-11',
     );
+    await fotoRef.set({
+      'versioneSchema': 1,
+      'revisione': 1,
+      'salvataIl': Timestamp.fromDate(DateTime.utc(2026, 11, 23)),
+      'voci': [
+        {'id': 'v14', ...voce('Rinominata', 'investimenti', 0)},
+        {'id': 'x1', ...voce('Pensionline', 'investimenti', 1)},
+      ],
+    });
     const server = GetOptions(source: Source.server);
     final fotoPrima = (await fotoRef.get(server)).data();
 

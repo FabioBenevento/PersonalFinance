@@ -45,6 +45,41 @@ void main() {
     expect(() => foto.voci.clear(), throwsUnsupportedError);
     expect(() => foto.voci.last.righe!.clear(), throwsUnsupportedError);
   });
+  test('CAT-013 la copia conserva le categorie e lo schema 2 per default', () {
+    final voci = [
+      const Voce.semplice(
+        id: 'i',
+        nome: 'ETF',
+        gruppo: Gruppo.investimenti,
+        categoria: CategoriaInvestimento.depositoTitoli,
+        saldoCentesimi: 700,
+      ),
+      Voce.conDettaglio(
+        id: 'c',
+        nome: 'Crypto',
+        gruppo: Gruppo.investimenti,
+        categoria: CategoriaInvestimento.crypto,
+        righe: const [Riga(id: 'r', nome: 'BTC', saldoCentesimi: 300)],
+      ),
+    ];
+    final foto = FotografiaMensile(mese: Mese(2026, 11), voci: voci);
+    voci[0] = voci[0].copyWith(categoria: CategoriaInvestimento.p2pLanding);
+    expect(foto.versioneSchema, 2);
+    expect(foto.voci.map((v) => v.categoria), [
+      CategoriaInvestimento.depositoTitoli,
+      CategoriaInvestimento.crypto,
+    ]);
+    expect(
+      foto.situazione.totaleCategoria(CategoriaInvestimento.depositoTitoli),
+      700,
+    );
+    final v1 = FotografiaMensile(
+      mese: Mese(2026, 11),
+      voci: const [],
+      versioneSchema: 1,
+    );
+    expect(v1.haCategorie, isFalse);
+  });
   test('FOT-007 fotografia vuota o a zero conserva i tre gruppi', () {
     for (final voci in <List<Voce>>[
       [],

@@ -10,6 +10,7 @@ import '../domain/voce.dart';
 import 'app_theme.dart';
 import 'gestione_voci.dart' show nomiGruppo;
 import 'patrimonio_layout.dart';
+import 'riepilogo_categorie.dart';
 import 'salva_fotografia.dart';
 
 class FotografiePage extends ConsumerWidget {
@@ -228,6 +229,16 @@ class _FotografiaDocumento extends StatelessWidget {
                   ),
                 ),
           ],
+          if (fotografia.haCategorie)
+            RiepilogoCategorie(situazione: situazione)
+          else
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Text(
+                'Riepilogo per categoria non disponibile',
+                style: TextStyle(color: coloreSecondario),
+              ),
+            ),
           const Padding(
             padding: EdgeInsets.all(20),
             child: Text(

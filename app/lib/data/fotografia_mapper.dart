@@ -8,7 +8,7 @@ import 'voce_mapper.dart';
 Map<String, Object?> fotografiaToMap(FotografiaMensile fotografia) {
   final ordini = <Gruppo, int>{};
   return {
-    'versioneSchema': 1,
+    'versioneSchema': fotografia.versioneSchema,
     'revisione': fotografia.revisione,
     'salvataIl': FieldValue.serverTimestamp(),
     'voci': [
@@ -25,7 +25,8 @@ Map<String, Object?> fotografiaToMap(FotografiaMensile fotografia) {
 }
 
 FotografiaMensile fotografiaFromMap(String id, Map<String, dynamic> data) {
-  if (data['versioneSchema'] != 1) {
+  final versione = data['versioneSchema'];
+  if (versione != schemaPrecedente && versione != schemaConCategorie) {
     throw const FormatException('Versione fotografia non supportata');
   }
   final voci =
@@ -41,10 +42,16 @@ FotografiaMensile fotografiaFromMap(String id, Map<String, dynamic> data) {
             ? gruppo
             : (a['ordine'] as int).compareTo(b['ordine'] as int);
       });
-  return FotografiaMensile(
+  final fotografia = FotografiaMensile(
     mese: Mese.fromId(id),
     voci: [for (final v in voci) voceFromMap(v['id'] as String, v)],
     revisione: data['revisione'] as int,
+    versioneSchema: versione as int,
     salvataIl: (data['salvataIl'] as Timestamp?)?.toDate(),
   );
+  if (fotografia.haCategorie &&
+      !fotografia.situazione.classificazioneCompleta) {
+    throw const FormatException('Fotografia con investimenti non classificati');
+  }
+  return fotografia;
 }

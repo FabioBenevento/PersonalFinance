@@ -216,6 +216,7 @@ void main() {
               id: 'altra',
               nome: 'Altro',
               gruppo: Gruppo.investimenti,
+              categoria: CategoriaInvestimento.crypto,
             ),
           ],
         ),
@@ -243,4 +244,70 @@ void main() {
       expect((await repo.leggi(mese))!.revisione, 2);
     },
   );
+
+  test('CAT-013 CAT-014 schema 2 round-trip, schema 1 invariato in lettura e sostituito alla conferma', () async {
+    final repo = FirestoreFotografieRepository(harness.uid, harness.firestore);
+    final nuovo = Mese(2026, 8);
+    final vecchio = Mese(2026, 7);
+    final investimento = [
+      const Voce.semplice(
+        id: 'inv',
+        nome: 'ETF',
+        gruppo: Gruppo.investimenti,
+        categoria: CategoriaInvestimento.depositoTitoli,
+        saldoCentesimi: 900,
+      ),
+    ];
+    final creata = await repo.crea(
+      FotografiaMensile(mese: nuovo, voci: investimento),
+    );
+    final raw = await harness.firestore
+        .doc('users/${harness.uid}/fotografie/${nuovo.id}')
+        .get(const GetOptions(source: Source.server));
+    expect(raw['versioneSchema'], 2);
+    expect(raw['voci'][0]['categoria'], 'depositoTitoli');
+    final riletta = (await repo.leggi(nuovo))!;
+    expect(riletta.versioneSchema, 2);
+    expect(riletta.voci.single.categoria, CategoriaInvestimento.depositoTitoli);
+    expect(creata.salvataIl, riletta.salvataIl);
+
+    final ref = harness.firestore.doc(
+      'users/${harness.uid}/fotografie/${vecchio.id}',
+    );
+    await ref.set({
+      'versioneSchema': 1,
+      'revisione': 3,
+      'salvataIl': Timestamp.fromDate(DateTime.utc(2026, 7, 31)),
+      'voci': [
+        {
+          'id': 'inv',
+          'nome': 'ETF',
+          'gruppo': 'investimenti',
+          'tipo': 'semplice',
+          'ordine': 0,
+          'saldoCentesimi': 500,
+        },
+      ],
+    });
+    Future<Map<String, dynamic>> documento() async =>
+        (await ref.get(const GetOptions(source: Source.server))).data()!;
+    final prima = await documento();
+    final v1 = (await repo.leggi(vecchio))!;
+    expect(v1.versioneSchema, 1);
+    expect(v1.voci.single.categoria, isNull);
+    expect((await repo.osserva().first).map((f) => f.mese), contains(vecchio));
+    expect(await documento(), prima);
+
+    final sostituita = await repo.sostituisci(
+      FotografiaMensile(mese: vecchio, voci: investimento),
+      v1,
+    );
+    expect(sostituita.versioneSchema, 2);
+    expect(sostituita.revisione, 4);
+    expect(
+      sostituita.voci.single.categoria,
+      CategoriaInvestimento.depositoTitoli,
+    );
+    expect((await documento())['versioneSchema'], 2);
+  });
 }

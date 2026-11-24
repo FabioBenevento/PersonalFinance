@@ -2,11 +2,16 @@ import 'mese.dart';
 import 'situazione.dart';
 import 'voce.dart';
 
+/// Schema 1: senza categorie (sola lettura); schema 2: categorie esplicite.
+const schemaPrecedente = 1;
+const schemaConCategorie = 2;
+
 class FotografiaMensile {
   FotografiaMensile({
     required this.mese,
     required List<Voce> voci,
     this.revisione = 1,
+    this.versioneSchema = schemaConCategorie,
     this.salvataIl,
   }) : voci = List.unmodifiable([
          for (final v in voci)
@@ -38,6 +43,9 @@ class FotografiaMensile {
   final Mese mese;
   final List<Voce> voci;
   final int revisione;
+  final int versioneSchema;
+
+  bool get haCategorie => versioneSchema >= schemaConCategorie;
   final DateTime? salvataIl;
 
   Situazione get situazione => Situazione(voci);
