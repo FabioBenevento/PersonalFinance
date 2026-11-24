@@ -42,6 +42,12 @@ class TabellaNomi {
     (json['ignorare'] as List).cast<String>(),
   );
 
+  /// Righe della tabella, per il file di revisione.
+  List<(String, String, Gruppo, CategoriaInvestimento?)> get elenco => [
+    for (final e in _voci.entries)
+      (e.key, e.value.nome, e.value.gruppo, e.value.categoria),
+  ];
+
   final Map<String, _Nome> _voci;
   final Set<String> _totali;
   final List<String> _ignorare;
