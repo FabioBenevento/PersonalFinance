@@ -129,6 +129,60 @@
       "nome": "Crowdfounding",
       "gruppo": "investimenti",
       "categoria": "p2pLanding"
+    },
+    "Portafoglio": {
+      "id": "v0",
+      "nome": "Contanti",
+      "gruppo": "salvadanaio"
+    },
+    "Fideruram": {
+      "id": "v12",
+      "nome": "Fideuram",
+      "gruppo": "liquidita"
+    },
+    "Deposito Titoli --TradeRepublic": {
+      "id": "v16",
+      "nome": "Deposito Titoli – TradeRepublic",
+      "gruppo": "investimenti",
+      "categoria": "depositoTitoli"
+    },
+    "Wibida": {
+      "id": "s-widiba",
+      "nome": "Widiba",
+      "gruppo": "liquidita"
+    },
+    "Hype": {
+      "id": "s-hype",
+      "nome": "Hype",
+      "gruppo": "liquidita"
+    },
+    "Unicredit": {
+      "id": "s-unicredit",
+      "nome": "Unicredit",
+      "gruppo": "liquidita"
+    },
+    "Intesa Sanpaolo": {
+      "id": "s-intesa-sanpaolo",
+      "nome": "Intesa Sanpaolo",
+      "gruppo": "liquidita"
+    },
+    "OvalMoney": {
+      "id": "s-ovalmoney",
+      "nome": "OvalMoney",
+      "gruppo": "investimenti",
+      "categoria": "pianiAccumulo"
+    },
+    "Gimme 5": {
+      "id": "s-gimme-5",
+      "nome": "Gimme 5",
+      "gruppo": "investimenti",
+      "categoria": "pianiAccumulo"
+    },
+    "Deposito Titoli – Widiba": {
+      "id": "s-deposito-titoli-widiba",
+      "nome": "Deposito Titoli – Widiba",
+      "gruppo": "investimenti",
+      "categoria": "depositoTitoli"
     }
   },
   "totali": [
@@ -139,6 +193,8 @@
   ],
   "ignorare": [
     "TFR",
-    "Base Imponibile"
+    "Base Imponibile",
+    "Totale Portafoglio",
+    "NOTA:"
   ]
 }
