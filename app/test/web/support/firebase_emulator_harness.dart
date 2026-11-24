@@ -82,6 +82,16 @@ class FirebaseEmulatorHarness {
     },
   );
 
+  /// Server-side write of [campi] (Firestore REST values) on a voce, as another device.
+  Future<void> scriviCampiRemoti(
+    String id,
+    Map<String, Object?> campi,
+  ) => _fixture(
+    'users/$uid/voci/$id?${campi.keys.map((k) => 'updateMask.fieldPaths=$k').join('&')}',
+    'PATCH',
+    {'fields': campi},
+  );
+
   Future<void> close() async {
     await _fixture('users/$uid/voci/b', 'DELETE');
     await _fixture('users/$uid/fotografie/2026-11', 'DELETE');

@@ -1,6 +1,8 @@
 @TestOn('browser')
 library;
 
+import 'dart:collection';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personal_finance/data/firestore_fotografie_repository.dart';
@@ -224,4 +226,113 @@ void main() {
       await col.doc(id).delete();
     }
   });
+
+  // Deterministic injection without a new seam: the transaction reads the
+  // documents first and only then looks up the categoria in the map, so the
+  // first lookup runs after the read and before the commit. The server write
+  // is started there, so it usually lands before the commit and forces a
+  // re-evaluation; if the commit wins the order is the opposite. Both orders
+  // must give the same result, hence the assertions on the final document only.
+  Future<void> migraConScritturaConcorrente(
+    FirestoreVociRepository repo,
+    Map<String, CategoriaInvestimento> categorie,
+    Future<void> Function() scrittura,
+  ) async {
+    var letture = 0;
+    late Future<void> concorrente;
+    await repo.classificaSeMancanti(
+      _Interferente(categorie, () {
+        if (letture++ == 0) concorrente = scrittura();
+      }),
+    );
+    await concorrente;
+  }
+
+  test(
+    'CAT-010 CAT-011 categoria scelta durante la migrazione vince',
+    () async {
+      final col = harness.firestore.collection('users/${harness.uid}/voci');
+      await col.doc('c1').set({
+        'nome': 'Da classificare',
+        'gruppo': 'investimenti',
+        'tipo': 'semplice',
+        'ordine': 0,
+        'saldoCentesimi': 100,
+      });
+      final repo = FirestoreVociRepository(harness.uid, harness.firestore);
+      await migraConScritturaConcorrente(
+        repo,
+        {'c1': CategoriaInvestimento.p2pLanding},
+        () => harness.scriviCampiRemoti('c1', {
+          'categoria': {'stringValue': 'crypto'},
+        }),
+      );
+      const server = GetOptions(source: Source.server);
+      final remoto = (await col.doc('c1').get(server)).data()!;
+      expect(remoto['categoria'], 'crypto');
+      expect(remoto['saldoCentesimi'], 100);
+      await col.doc('c1').delete();
+    },
+  );
+
+  test(
+    'CAT-010 CAT-012 saldo e righe modificati durante la migrazione restano',
+    () async {
+      final col = harness.firestore.collection('users/${harness.uid}/voci');
+      await col.doc('c2').set({
+        'nome': 'Con righe',
+        'gruppo': 'investimenti',
+        'tipo': 'dettaglio',
+        'ordine': 0,
+        'righe': [
+          {'id': 'r', 'nome': 'Piattaforma', 'saldoCentesimi': 100},
+        ],
+      });
+      final repo = FirestoreVociRepository(harness.uid, harness.firestore);
+      await migraConScritturaConcorrente(
+        repo,
+        {'c2': CategoriaInvestimento.p2pLanding},
+        () => harness.scriviCampiRemoti('c2', {
+          'righe': {
+            'arrayValue': {
+              'values': [
+                {
+                  'mapValue': {
+                    'fields': {
+                      'id': {'stringValue': 'r'},
+                      'nome': {'stringValue': 'Piattaforma'},
+                      'saldoCentesimi': {'integerValue': '999'},
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        }),
+      );
+      const server = GetOptions(source: Source.server);
+      expect((await col.doc('c2').get(server)).data(), {
+        'nome': 'Con righe',
+        'gruppo': 'investimenti',
+        'tipo': 'dettaglio',
+        'ordine': 0,
+        'righe': [
+          {'id': 'r', 'nome': 'Piattaforma', 'saldoCentesimi': 999},
+        ],
+        'categoria': 'p2pLanding',
+      });
+      await col.doc('c2').delete();
+    },
+  );
+}
+
+class _Interferente extends MapView<String, CategoriaInvestimento> {
+  _Interferente(super.map, this._allaLettura);
+  final void Function() _allaLettura;
+
+  @override
+  CategoriaInvestimento? operator [](Object? key) {
+    _allaLettura();
+    return super[key];
+  }
 }
