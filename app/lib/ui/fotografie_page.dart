@@ -29,7 +29,7 @@ class FotografiePage extends ConsumerWidget {
         ),
       ),
       body: PatrimonioLayout(
-        storico: true,
+        destinazione: Destinazione.fotografie,
         child: switch (fotografie) {
           AsyncData(:final value) => _contenuto(context, value),
           AsyncError() => Center(

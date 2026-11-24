@@ -67,7 +67,7 @@ class SituazionePage extends ConsumerWidget {
         ],
       ),
       body: PatrimonioLayout(
-        storico: false,
+        destinazione: Destinazione.situazione,
         child: switch (voci) {
           AsyncData(:final value) => _Elenco(Situazione(value)),
           AsyncError() => const Center(

@@ -3,14 +3,24 @@ import 'package:go_router/go_router.dart';
 
 import 'app_theme.dart';
 
+enum Destinazione {
+  situazione('Situazione', '/'),
+  fotografie('Fotografie', '/fotografie'),
+  andamento('Andamento', '/andamento');
+
+  const Destinazione(this.nome, this.path);
+  final String nome;
+  final String path;
+}
+
 class PatrimonioLayout extends StatelessWidget {
   const PatrimonioLayout({
     super.key,
-    required this.storico,
+    required this.destinazione,
     required this.child,
   });
 
-  final bool storico;
+  final Destinazione destinazione;
   final Widget child;
 
   @override
@@ -22,18 +32,17 @@ class PatrimonioLayout extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Row(
             children: [
-              Expanded(
-                child: _destinazione(context, 'Situazione', '/', !storico),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _destinazione(
-                  context,
-                  'Fotografie',
-                  '/fotografie',
-                  storico,
+              for (final d in Destinazione.values) ...[
+                if (d != Destinazione.situazione) const SizedBox(width: 8),
+                Expanded(
+                  child: _destinazione(
+                    context,
+                    d.nome,
+                    d.path,
+                    d == destinazione,
+                  ),
                 ),
-              ),
+              ],
             ],
           ),
         ),
