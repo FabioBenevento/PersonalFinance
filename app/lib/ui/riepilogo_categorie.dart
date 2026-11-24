@@ -55,7 +55,7 @@ class RiepilogoCategorie extends StatelessWidget {
                   child: Text(
                     '${scriviImporto(situazione.totaleCategoria(categoria))}  '
                     '${scriviPercentuale(situazione.percentualeCategoria(categoria))}',
-                    style: stileCifre,
+                    style: stileImporto,
                     textAlign: TextAlign.end,
                   ),
                 ),

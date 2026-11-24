@@ -6,9 +6,19 @@ const coloreSecondario = Color(0xFF50665D);
 const coloreAzione = Color(0xFF215A42);
 const coloreSelezione = Color(0xFFE7EEE7);
 const coloreBordo = Color(0xFFD7E0D9);
+const coloreSuperficie = Colors.white;
 const stileCifre = TextStyle(
   fontFamily: 'monospace',
   fontFeatures: [FontFeature.tabularFigures()],
+);
+final stileImporto = stileCifre;
+final stileImportoPiccolo = stileCifre.copyWith(fontSize: 12);
+final stileImportoSecondario = stileImportoPiccolo.copyWith(
+  color: coloreSecondario,
+);
+final stileTotale = stileCifre.copyWith(
+  fontSize: 30,
+  fontWeight: FontWeight.bold,
 );
 
 final appTheme = ThemeData(

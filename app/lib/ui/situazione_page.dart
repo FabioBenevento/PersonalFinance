@@ -47,7 +47,7 @@ class SituazionePage extends ConsumerWidget {
               onPressed: bloccato ? null : () => aggiungiVoce(context, ref),
               child: const Text(
                 'Aggiungi voce',
-                style: TextStyle(color: Colors.white),
+                style: TextStyle(color: coloreSuperficie),
               ),
             ),
           if (MediaQuery.sizeOf(context).width < 700)
@@ -59,7 +59,10 @@ class SituazionePage extends ConsumerWidget {
           else
             TextButton(
               onPressed: ref.read(authGatewayProvider).signOut,
-              child: const Text('Esci', style: TextStyle(color: Colors.white)),
+              child: const Text(
+                'Esci',
+                style: TextStyle(color: coloreSuperficie),
+              ),
             ),
         ],
       ),
@@ -137,10 +140,7 @@ class _Elenco extends ConsumerWidget {
                           ),
                           Text(
                             scriviImporto(situazione.totale),
-                            style: stileCifre.copyWith(
-                              fontSize: 30,
-                              fontWeight: FontWeight.bold,
-                            ),
+                            style: stileTotale,
                           ),
                         ],
                       ),
@@ -249,15 +249,15 @@ class _Riepilogo extends StatelessWidget {
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text(scriviImporto(saldo), style: stileCifre),
+                Text(scriviImporto(saldo), style: stileImporto),
                 if (percentuale != null)
-                  Text(percentuale!, style: stileCifre.copyWith(fontSize: 12)),
+                  Text(percentuale!, style: stileImportoPiccolo),
               ],
             )
           else
             Text(
               [scriviImporto(saldo), ?percentuale].join('  '),
-              style: stileCifre.merge(stile),
+              style: stileImporto.merge(stile),
             ),
         ],
       ),
@@ -311,7 +311,10 @@ class _VoceRow extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   if (voce.conDettaglio)
-                    Text(scriviImporto(voce.saldoCentesimi), style: stileCifre)
+                    Text(
+                      scriviImporto(voce.saldoCentesimi),
+                      style: stileImporto,
+                    )
                   else
                     SaldoEditor(
                       saldoCentesimi: voce.saldoCentesimi,
@@ -323,7 +326,7 @@ class _VoceRow extends ConsumerWidget {
                         (s) => s.modificaSaldoVoce(voce.id, c),
                       ),
                     ),
-                  Text(percentuale, style: stileCifre.copyWith(fontSize: 12)),
+                  Text(percentuale, style: stileImportoPiccolo),
                 ],
               )
             else if (voce.conDettaglio)

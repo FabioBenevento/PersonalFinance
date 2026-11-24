@@ -17,7 +17,7 @@ class PatrimonioLayout extends StatelessWidget {
   Widget build(BuildContext context) => Column(
     children: [
       Material(
-        color: Colors.white,
+        color: coloreSuperficie,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Row(
@@ -63,7 +63,7 @@ class DocumentoPatrimonio extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Material(
-    color: Colors.white,
+    color: coloreSuperficie,
     shape: RoundedRectangleBorder(
       side: const BorderSide(color: coloreBordo),
       borderRadius: BorderRadius.circular(4),

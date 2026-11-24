@@ -92,7 +92,7 @@ class FotografiePage extends ConsumerWidget {
                   title: Text(nomeMese(ordinate[i].mese)),
                   subtitle: Text(
                     scriviImporto(ordinate[i].situazione.totale),
-                    style: stileCifre,
+                    style: stileImporto,
                   ),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => context.go('/fotografie/${ordinate[i].mese.id}'),
@@ -187,13 +187,7 @@ class _FotografiaDocumento extends StatelessWidget {
                   'PATRIMONIO TOTALE',
                   style: TextStyle(color: coloreSecondario, fontSize: 12),
                 ),
-                Text(
-                  scriviImporto(situazione.totale),
-                  style: stileCifre.copyWith(
-                    fontSize: 30,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                Text(scriviImporto(situazione.totale), style: stileTotale),
               ],
             ),
           ),
@@ -303,11 +297,8 @@ class _Cifre extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final importo = Text(scriviImporto(saldo), style: stileCifre);
-    final quota = Text(
-      percentuale ?? '',
-      style: stileCifre.copyWith(fontSize: 12, color: coloreSecondario),
-    );
+    final importo = Text(scriviImporto(saldo), style: stileImporto);
+    final quota = Text(percentuale ?? '', style: stileImportoSecondario);
     return MediaQuery.sizeOf(context).width < 700
         ? Column(
             crossAxisAlignment: CrossAxisAlignment.end,
