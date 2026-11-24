@@ -1,0 +1,6 @@
+{
+  "name": "import-storico",
+  "private": true,
+  "scripts": { "test": "node --test" },
+  "dependencies": { "firebase-admin": "^13.0.0" }
+}
