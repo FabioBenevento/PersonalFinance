@@ -55,3 +55,12 @@ test('UID: si ferma se allowlist non ha esattamente un documento', async () => {
   await db.doc('allowlist/u2').delete();
   await assert.rejects(uidDaAllowlist(db), /allowlist/);
 });
+
+test('allowlist con 0 o 2 documenti: il caricamento si ferma senza scrivere', async () => {
+  await db.doc('allowlist/u2').set({});
+  await assert.rejects(caricaFotografie(db, file), /allowlist/);
+  await db.doc('allowlist/u1').delete();
+  await db.doc('allowlist/u2').delete();
+  await assert.rejects(caricaFotografie(db, file), /allowlist/);
+  assert.equal((await db.collection('users/u1/fotografie').get()).size, 0);
+});
