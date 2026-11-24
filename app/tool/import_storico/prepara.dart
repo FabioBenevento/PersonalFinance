@@ -154,6 +154,19 @@ Map<String, SaldoVoce> preparaSaldiOggi(
       righe,
     );
   }
+  for (final v in vociIniziali) {
+    final o = out[v.id];
+    if (o == null) {
+      throw PreparazioneException('Voce attesa mancante "${v.nome}" ($dove)');
+    }
+    for (final r in v.righe ?? const <Riga>[]) {
+      if (!o.righe!.containsKey(r.id)) {
+        throw PreparazioneException(
+          'Riga attesa mancante "${r.nome}" di "${v.nome}" ($dove)',
+        );
+      }
+    }
+  }
   for (final k in dettagli.keys) {
     if (!out.values.any((v) => v.nome == k && v.righe != null)) {
       throw PreparazioneException('Dettaglio non riconducibile "$k" ($dove)');

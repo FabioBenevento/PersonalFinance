@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personal_finance/data/fotografia_mapper.dart';
+import 'package:personal_finance/domain/voci_iniziali.dart';
 
 import '../../tool/import_storico/parser_foglio.dart';
 import '../../tool/import_storico/prepara.dart';
@@ -44,88 +45,91 @@ Map<String, dynamic> ott2026() => {
   ],
 };
 
-Map<String, dynamic> portafoglio({String bwin = 'Bwin'}) => {
+final tabellaTutte = TabellaNomi.fromJson({
+  'voci': {
+    for (final v in vociIniziali)
+      v.nome: {'id': v.id, 'nome': v.nome, 'gruppo': v.gruppo.name},
+  },
+  'totali': ['Totale Liquidità'],
+  'ignorare': ['TFR'],
+});
+
+/// Foglio Portafoglio completo; `senzaVoce` e `senzaRiga` ne tolgono un elemento.
+Map<String, dynamic> portafoglio({
+  String bwin = 'Bwin',
+  String? senzaVoce,
+  String? senzaRiga,
+}) => {
   'situazione': [
-    ['Contanti', '€ 500,00'],
-    ['MatchBetting', '€ 72,07'],
+    for (final v in vociIniziali)
+      if (v.nome != senzaVoce)
+        [v.nome, v.nome == 'Contanti' ? '€ 500,00' : '€ 1,00'],
     ['Totale Liquidità', '€ 1,00'],
     ['TFR lordo', '€ 9,00'],
   ],
   'dettagli': {
-    'MatchBetting': [
-      ['Betfair', '€ 70,00'],
-      [bwin, '€ 2,07'],
-    ],
+    for (final v in vociIniziali)
+      if (v.righe != null)
+        v.nome: [
+          for (final r in v.righe!)
+            if (r.nome != senzaRiga)
+              [
+                r.nome == 'Bwin' ? bwin : r.nome,
+                v.nome == 'MatchBetting' && r.nome == 'Betfair'
+                    ? '€ 70,00'
+                    : '€ 0,01',
+              ],
+        ],
   },
 };
 
+Matcher bloccaCon(String testo) => throwsA(
+  isA<PreparazioneException>().having(
+    (e) => e.message,
+    'message',
+    contains(testo),
+  ),
+);
+
 void main() {
   test('IMP-016 saldi di oggi con ID, nomi attesi e righe', () {
-    final t = TabellaNomi.fromJson({
-      'voci': {
-        'Contanti': {'id': 'v0', 'nome': 'Contanti', 'gruppo': 'salvadanaio'},
-        'MatchBetting': {
-          'id': 'v3',
-          'nome': 'MatchBetting',
-          'gruppo': 'salvadanaio',
-        },
-      },
-      'totali': ['Totale Liquidità'],
-      'ignorare': ['TFR'],
+    final s = preparaSaldiOggi(portafoglio(), tabellaTutte);
+    final doc = documentoSaldiOggi(s);
+    expect(doc['v0'], {'nome': 'Contanti', 'saldoCentesimi': 50000});
+    final mb = doc['v3'] as Map;
+    expect(mb['nome'], 'MatchBetting');
+    expect((mb['righe'] as Map)['v3-r0'], {
+      'nome': 'Betfair',
+      'saldoCentesimi': 7000,
     });
-    final s = preparaSaldiOggi(portafoglio(), t);
-    expect(documentoSaldiOggi(s), {
-      'v0': {'nome': 'Contanti', 'saldoCentesimi': 50000},
-      'v3': {
-        'nome': 'MatchBetting',
-        'righe': {
-          'v3-r0': {'nome': 'Betfair', 'saldoCentesimi': 7000},
-          'v3-r2': {'nome': 'Bwin', 'saldoCentesimi': 207},
-        },
-      },
+    expect((mb['righe'] as Map)['v3-r2'], {
+      'nome': 'Bwin',
+      'saldoCentesimi': 1,
     });
-    expect(s['v3']!.saldo, 7207);
-    final r = scriviRevisione(Preparazione(), t, s);
+    expect(s['v3']!.saldo, 7017);
+    final r = scriviRevisione(Preparazione(), tabellaTutte, s);
     expect(r, contains('| Contanti | € 500,00 |'));
-    expect(r, contains('| - Bwin | € 2,07 |'));
-    expect(r, contains('Totale € 572,07'));
+    expect(r, contains('| - Bwin | € 0,01 |'));
   });
 
   test('IMP-017 voce o riga non riconducibile ferma la preparazione', () {
-    final t = TabellaNomi.fromJson({
-      'voci': {
-        'Contanti': {'id': 'v0', 'nome': 'Contanti', 'gruppo': 'salvadanaio'},
-        'MatchBetting': {
-          'id': 'v3',
-          'nome': 'MatchBetting',
-          'gruppo': 'salvadanaio',
-        },
-        'Hype': {'id': 's-hype', 'nome': 'Hype', 'gruppo': 'liquidita'},
-      },
-      'totali': ['Totale Liquidità'],
-      'ignorare': ['TFR'],
-    });
     expect(
-      () => preparaSaldiOggi(portafoglio(bwin: 'Bwin2'), t),
-      throwsA(
-        isA<PreparazioneException>().having(
-          (e) => e.message,
-          'message',
-          contains('Bwin2'),
-        ),
-      ),
+      () => preparaSaldiOggi(portafoglio(bwin: 'Bwin2'), tabellaTutte),
+      bloccaCon('Bwin2'),
     );
     final g = portafoglio();
     (g['situazione'] as List).add(['Hype', '€ 1,00']);
+    expect(() => preparaSaldiOggi(g, tabellaTutte), bloccaCon('Hype'));
+  });
+
+  test('IMP-017 voce o riga attesa mancante ferma la preparazione', () {
     expect(
-      () => preparaSaldiOggi(g, t),
-      throwsA(
-        isA<PreparazioneException>().having(
-          (e) => e.message,
-          'message',
-          contains('Hype'),
-        ),
-      ),
+      () => preparaSaldiOggi(portafoglio(senzaVoce: 'PayPal'), tabellaTutte),
+      bloccaCon('PayPal'),
+    );
+    expect(
+      () => preparaSaldiOggi(portafoglio(senzaRiga: 'Mintos'), tabellaTutte),
+      bloccaCon('Mintos'),
     );
   });
 
