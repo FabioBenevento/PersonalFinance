@@ -26,23 +26,7 @@ Future<void> cambiaCategoria(
   WidgetRef ref,
   Voce voce,
 ) async {
-  final categoria = await showDialog<CategoriaInvestimento>(
-    context: context,
-    builder: (context) => SimpleDialog(
-      title: Text('Categoria di ${voce.nome}'),
-      children: [
-        for (final categoria in CategoriaInvestimento.values)
-          SimpleDialogOption(
-            onPressed: () => Navigator.pop(context, categoria),
-            child: Text(nomiCategoria[categoria]!),
-          ),
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Annulla'),
-        ),
-      ],
-    ),
-  );
+  final categoria = await chiediCategoria(context, 'Categoria di ${voce.nome}');
   if (categoria == null || !context.mounted) return;
   await modificaVoce(
     context,
@@ -51,6 +35,27 @@ Future<void> cambiaCategoria(
     (s) => s.modificaCategoria(voce.id, categoria),
   );
 }
+
+Future<CategoriaInvestimento?> chiediCategoria(
+  BuildContext context,
+  String titolo,
+) => showDialog<CategoriaInvestimento>(
+  context: context,
+  builder: (context) => SimpleDialog(
+    title: Text(titolo),
+    children: [
+      for (final categoria in CategoriaInvestimento.values)
+        SimpleDialogOption(
+          onPressed: () => Navigator.pop(context, categoria),
+          child: Text(nomiCategoria[categoria]!),
+        ),
+      TextButton(
+        onPressed: () => Navigator.pop(context),
+        child: const Text('Annulla'),
+      ),
+    ],
+  ),
+);
 
 /// Runs [f], showing validation and save errors in a snackbar.
 Future<void> esegui(BuildContext context, Future<void> Function() f) async {
@@ -140,15 +145,29 @@ class _NomeDialogState extends State<_NomeDialog> {
 
 Future<void> aggiungiVoce(BuildContext context, WidgetRef ref) async {
   final nuova =
-      await showDialog<({String nome, Gruppo gruppo, bool dettaglio})>(
-        context: context,
-        builder: (_) => const _NuovaVoceDialog(),
-      );
+      await showDialog<
+        ({
+          String nome,
+          Gruppo gruppo,
+          bool dettaglio,
+          CategoriaInvestimento? categoria,
+        })
+      >(context: context, builder: (_) => const _NuovaVoceDialog());
   if (nuova == null || !context.mounted) return;
   final id = ref.read(vociRepositoryProvider).nuovoId();
   final voce = nuova.dettaglio
-      ? Voce.conDettaglio(id: id, nome: nuova.nome, gruppo: nuova.gruppo)
-      : Voce.semplice(id: id, nome: nuova.nome, gruppo: nuova.gruppo);
+      ? Voce.conDettaglio(
+          id: id,
+          nome: nuova.nome,
+          gruppo: nuova.gruppo,
+          categoria: nuova.categoria,
+        )
+      : Voce.semplice(
+          id: id,
+          nome: nuova.nome,
+          gruppo: nuova.gruppo,
+          categoria: nuova.categoria,
+        );
   await modificaVoce(context, ref, id, (s) => s.aggiungiVoce(voce));
 }
 
@@ -163,6 +182,7 @@ class _NuovaVoceDialogState extends State<_NuovaVoceDialog> {
   final _nome = TextEditingController();
   var _gruppo = Gruppo.salvadanaio;
   var _conDettaglio = false;
+  CategoriaInvestimento? _categoria;
 
   @override
   void dispose() {
@@ -187,10 +207,25 @@ class _NuovaVoceDialogState extends State<_NuovaVoceDialog> {
               ChoiceChip(
                 label: Text(nomiGruppo[g]!),
                 selected: _gruppo == g,
-                onSelected: (_) => setState(() => _gruppo = g),
+                onSelected: (_) => setState(() {
+                  if (_gruppo != g) _categoria = null;
+                  _gruppo = g;
+                }),
               ),
           ],
         ),
+        if (_gruppo == Gruppo.investimenti)
+          Wrap(
+            spacing: 8,
+            children: [
+              for (final categoria in CategoriaInvestimento.values)
+                ChoiceChip(
+                  label: Text(nomiCategoria[categoria]!),
+                  selected: _categoria == categoria,
+                  onSelected: (_) => setState(() => _categoria = categoria),
+                ),
+            ],
+          ),
         Wrap(
           spacing: 8,
           children: [
@@ -214,11 +249,14 @@ class _NuovaVoceDialogState extends State<_NuovaVoceDialog> {
         child: const Text('Annulla'),
       ),
       TextButton(
-        onPressed: () => Navigator.pop(context, (
-          nome: _nome.text,
-          gruppo: _gruppo,
-          dettaglio: _conDettaglio,
-        )),
+        onPressed: _gruppo == Gruppo.investimenti && _categoria == null
+            ? null
+            : () => Navigator.pop(context, (
+                nome: _nome.text,
+                gruppo: _gruppo,
+                dettaglio: _conDettaglio,
+                categoria: _categoria,
+              )),
         child: const Text('Aggiungi'),
       ),
     ],
@@ -256,11 +294,16 @@ Future<void> spostaVoce(BuildContext context, WidgetRef ref, Voce voce) async {
     ),
   );
   if (gruppo == null || !context.mounted) return;
+  CategoriaInvestimento? categoria;
+  if (gruppo == Gruppo.investimenti) {
+    categoria = await chiediCategoria(context, 'Categoria di ${voce.nome}');
+    if (categoria == null || !context.mounted) return;
+  }
   await modificaVoce(
     context,
     ref,
     voce.id,
-    (s) => s.spostaVoce(voce.id, gruppo),
+    (s) => s.spostaVoce(voce.id, gruppo, categoria: categoria),
   );
 }
 

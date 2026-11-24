@@ -132,12 +132,47 @@ void _operazioni() {
   ]);
   Matcher rifiuta() => throwsA(isA<ValidazioneException>());
 
+  test(
+    'CAT-002 creazione investimenti richiede categoria per entrambi i tipi',
+    () {
+      final s = base();
+      for (final v in [
+        const Voce.semplice(
+          id: 'n',
+          nome: 'Nuova',
+          gruppo: Gruppo.investimenti,
+        ),
+        const Voce.conDettaglio(
+          id: 'n',
+          nome: 'Nuova',
+          gruppo: Gruppo.investimenti,
+        ),
+      ]) {
+        expect(() => s.aggiungiVoce(v), rifiuta());
+        final r = s.aggiungiVoce(
+          v.copyWith(categoria: CategoriaInvestimento.crypto),
+        );
+        expect(r.voci.last.id, 'n');
+        expect(r.voci.last.categoria, CategoriaInvestimento.crypto);
+        expect(r.voci.last.saldoCentesimi, 0);
+        expect(r.voci.last.conDettaglio, v.conDettaglio);
+      }
+      expect(s.voci.length, 3);
+    },
+  );
+
   test('SIT-012 nome di voce non valido', () {
     final s = base();
     expect(() => s.aggiungiVoce(_v('', Gruppo.liquidita, 0)), rifiuta());
     expect(() => s.aggiungiVoce(_v('   ', Gruppo.liquidita, 0)), rifiuta());
     expect(
-      () => s.aggiungiVoce(_v(' bbva ', Gruppo.investimenti, 0)),
+      () => s.aggiungiVoce(
+        _v(
+          ' bbva ',
+          Gruppo.investimenti,
+          0,
+        ).copyWith(categoria: CategoriaInvestimento.crypto),
+      ),
       rifiuta(),
     );
     expect(() => s.rinominaVoce('Fideuram', ' bbva '), rifiuta());
@@ -156,12 +191,46 @@ void _operazioni() {
     expect(s.rinominaVoce('BBVA', 'bbva').voci.first.nome, 'bbva');
   });
 
+  test('CAT-004 ingresso senza scelta rifiutato senza modifiche', () {
+    final s = conRighe();
+    expect(() => s.spostaVoce('m', Gruppo.investimenti), rifiuta());
+    expect(s.voci.single.gruppo, Gruppo.salvadanaio);
+    expect(s.voci.single.saldoCentesimi, 100);
+  });
+
+  test('CAT-005 uscita rimuove categoria e rientro richiede nuova scelta', () {
+    final s = conRighe().spostaVoce(
+      'm',
+      Gruppo.investimenti,
+      categoria: CategoriaInvestimento.p2pLanding,
+    );
+    final uscita = s.spostaVoce('m', Gruppo.liquidita);
+    expect(uscita.voci.single.categoria, isNull);
+    expect(uscita.voci.single.id, 'm');
+    expect(uscita.voci.single.righe!.single.id, '1');
+    expect(uscita.voci.single.righe!.single.nome, 'Bwin');
+    expect(uscita.voci.single.saldoCentesimi, 100);
+    expect(() => uscita.spostaVoce('m', Gruppo.investimenti), rifiuta());
+    final rientro = uscita.spostaVoce(
+      'm',
+      Gruppo.investimenti,
+      categoria: CategoriaInvestimento.crypto,
+    );
+    expect(rientro.voci.single.categoria, CategoriaInvestimento.crypto);
+    expect(rientro.voci.single.saldoCentesimi, 100);
+  });
+
   test('SIT-013 spostamento in un altro gruppo', () {
     final s = base();
-    final r = s.spostaVoce('Fideuram', Gruppo.investimenti);
+    final r = s.spostaVoce(
+      'Fideuram',
+      Gruppo.investimenti,
+      categoria: CategoriaInvestimento.depositoTitoli,
+    );
     expect(r.totaleGruppo(Gruppo.liquidita), 0);
     expect(r.totaleGruppo(Gruppo.investimenti), 15000);
     expect(r.voci.last.nome, 'Fideuram');
+    expect(r.voci.last.categoria, CategoriaInvestimento.depositoTitoli);
     expect(r.totale, s.totale);
   });
 

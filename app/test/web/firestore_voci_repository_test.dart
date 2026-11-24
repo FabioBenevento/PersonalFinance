@@ -62,6 +62,75 @@ void main() {
   );
 
   test(
+    'CAT-002 CAT-004 CAT-005 creazione e spostamento persistono la scelta',
+    () async {
+      final repo = FirestoreVociRepository(harness.uid, harness.firestore);
+      final doc = harness.firestore.doc('users/${harness.uid}/voci/b');
+      for (final voce in [
+        const Voce.semplice(
+          id: 'b',
+          nome: 'Nuova',
+          gruppo: Gruppo.investimenti,
+          categoria: CategoriaInvestimento.depositoTitoli,
+        ),
+        const Voce.conDettaglio(
+          id: 'b',
+          nome: 'Nuova',
+          gruppo: Gruppo.investimenti,
+          categoria: CategoriaInvestimento.crypto,
+        ),
+      ]) {
+        await repo.salva(const Situazione([]).aggiungiVoce(voce).voci.single);
+        final creata = (await repo.osserva().first).single;
+        expect(creata.categoria, voce.categoria);
+        expect(creata.conDettaglio, voce.conDettaglio);
+        expect(creata.saldoCentesimi, 0);
+      }
+      final conSaldo = const Situazione([
+        Voce.conDettaglio(
+          id: 'b',
+          nome: 'Prestiti',
+          gruppo: Gruppo.investimenti,
+          categoria: CategoriaInvestimento.p2pLanding,
+          righe: [Riga(id: 'r', nome: 'Piattaforma', saldoCentesimi: 1234)],
+        ),
+      ]);
+      await repo.salva(conSaldo.voci.single);
+      await repo.salva(conSaldo.spostaVoce('b', Gruppo.liquidita).voci.single);
+      final remoto = (await doc.get(const GetOptions(source: Source.server)))
+          .data()!;
+      expect(remoto.containsKey('categoria'), isFalse);
+      expect(remoto['gruppo'], 'liquidita');
+      expect(remoto['tipo'], 'dettaglio');
+      expect(remoto['righe'], [
+        {'id': 'r', 'nome': 'Piattaforma', 'saldoCentesimi': 1234},
+      ]);
+      final uscita = (await repo.osserva().first).single;
+      expect(uscita.categoria, isNull);
+      expect(uscita.saldoCentesimi, 1234);
+      await repo.salva(
+        Situazione([uscita])
+            .spostaVoce(
+              'b',
+              Gruppo.investimenti,
+              categoria: CategoriaInvestimento.crypto,
+            )
+            .voci
+            .single,
+      );
+      final rientro = (await FirestoreVociRepository(
+        harness.uid,
+        harness.firestore,
+      ).osserva().first).single;
+      expect(rientro.categoria, CategoriaInvestimento.crypto);
+      expect(rientro.gruppo, Gruppo.investimenti);
+      expect(rientro.id, 'b');
+      expect(rientro.saldoCentesimi, 1234);
+      expect(rientro.righe!.single.id, 'r');
+    },
+  );
+
+  test(
     'CAT-019 adattatore distingue categoria sconosciuta e documento precedente',
     () async {
       final doc = harness.firestore.doc('users/${harness.uid}/voci/b');

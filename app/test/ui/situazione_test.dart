@@ -359,6 +359,134 @@ void main() {
     expect(find.text('€ 275,00'), findsOneWidget);
   });
 
+  for (final tipo in ['Semplice', 'Con dettaglio']) {
+    testWidgets('CAT-002 creazione $tipo richiede scelta esplicita', (
+      tester,
+    ) async {
+      final repo = await pump(tester);
+      final scritture = <Voce>[];
+      repo.suSalva = scritture.add;
+      await tester.tap(find.text('Aggiungi voce'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.widgetWithText(TextField, 'Nome'), 'Nuova');
+      await tester.tap(find.widgetWithText(ChoiceChip, 'Investimenti'));
+      await tester.tap(find.widgetWithText(ChoiceChip, tipo));
+      await tester.pumpAndSettle();
+      for (final nome in [
+        'Piani accumulo',
+        'P2P Landing',
+        'Deposito Titoli',
+        'Crypto',
+      ]) {
+        expect(
+          tester
+              .widget<ChoiceChip>(find.widgetWithText(ChoiceChip, nome))
+              .selected,
+          isFalse,
+        );
+      }
+      await tester.tap(find.text('Aggiungi'));
+      await tester.pumpAndSettle();
+      expect(scritture, isEmpty);
+      await tester.tap(find.widgetWithText(ChoiceChip, 'Deposito Titoli'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Aggiungi'));
+      await tester.pumpAndSettle();
+      expect(scritture, hasLength(1));
+      final nuova = (await repo.osserva().first).last;
+      expect(nuova.nome, 'Nuova');
+      expect(nuova.categoria, CategoriaInvestimento.depositoTitoli);
+      expect(nuova.saldoCentesimi, 0);
+      expect(nuova.conDettaglio, tipo == 'Con dettaglio');
+      expect(
+        tester.getTopLeft(find.text('Nuova')).dy,
+        greaterThan(tester.getTopLeft(find.text('ETF')).dy),
+      );
+      await tester.tap(find.text('Aggiungi voce'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(ChoiceChip, 'Investimenti'));
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<ChoiceChip>(
+              find.widgetWithText(ChoiceChip, 'Deposito Titoli'),
+            )
+            .selected,
+        isFalse,
+      );
+      await tester.tap(find.text('Annulla'));
+      await tester.pumpAndSettle();
+      expect(scritture, hasLength(1));
+    });
+  }
+
+  testWidgets('CAT-004 CAT-005 spostamento annullato, confermato e rientro', (
+    tester,
+  ) async {
+    final repo = await pump(tester, [
+      const Voce.conDettaglio(
+        id: 'd',
+        nome: 'Prestiti',
+        gruppo: Gruppo.liquidita,
+        righe: [Riga(id: 'r', nome: 'Piattaforma', saldoCentesimi: 1234)],
+      ),
+      ..._vociSemplici,
+    ]);
+    final scritture = <Voce>[];
+    repo.suSalva = scritture.add;
+    Future<void> sposta(String gruppo) async {
+      await tester.tap(find.byTooltip('Azioni Prestiti'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Sposta'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(SimpleDialogOption, gruppo));
+      await tester.pumpAndSettle();
+    }
+
+    await sposta('Investimenti');
+    expect(find.text('Categoria di Prestiti'), findsOneWidget);
+    expect(scritture, isEmpty);
+    await tester.tap(find.text('Annulla'));
+    await tester.pumpAndSettle();
+    expect(scritture, isEmpty);
+    expect(
+      (await repo.osserva().first).firstWhere((v) => v.id == 'd').gruppo,
+      Gruppo.liquidita,
+    );
+    await sposta('Investimenti');
+    await tester.tap(find.widgetWithText(SimpleDialogOption, 'P2P Landing'));
+    await tester.pumpAndSettle();
+    expect(scritture, hasLength(1));
+    final ingresso = (await repo.osserva().first).last;
+    expect(ingresso.id, 'd');
+    expect(ingresso.gruppo, Gruppo.investimenti);
+    expect(ingresso.categoria, CategoriaInvestimento.p2pLanding);
+    expect(ingresso.saldoCentesimi, 1234);
+    expect(ingresso.righe!.single.id, 'r');
+    expect(ingresso.righe!.single.nome, 'Piattaforma');
+    expect(ingresso.conDettaglio, isTrue);
+    await sposta('Liquidità');
+    expect(scritture, hasLength(2));
+    final uscita = (await repo.osserva().first).firstWhere((v) => v.id == 'd');
+    expect(uscita.categoria, isNull);
+    expect(uscita.saldoCentesimi, 1234);
+    expect(uscita.righe!.single.id, 'r');
+    await sposta('Investimenti');
+    expect(find.text('Categoria di Prestiti'), findsOneWidget);
+    expect(scritture, hasLength(2));
+    await tester.tap(find.text('Annulla'));
+    await tester.pumpAndSettle();
+    expect(scritture, hasLength(2));
+    await sposta('Investimenti');
+    await tester.tap(find.widgetWithText(SimpleDialogOption, 'Crypto'));
+    await tester.pumpAndSettle();
+    expect(scritture, hasLength(3));
+    expect(
+      (await repo.osserva().first).last.categoria,
+      CategoriaInvestimento.crypto,
+    );
+  });
+
   testWidgets('SIT-011 aggiunta di una voce', (tester) async {
     final repo = await pump(tester);
     await tester.tap(find.text('Aggiungi voce'));

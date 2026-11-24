@@ -28,6 +28,11 @@ class Situazione {
   /// Aggiunge una voce in fondo al suo gruppo (l'ordine nella lista è l'ordine
   /// di visualizzazione).
   Situazione aggiungiVoce(Voce v) {
+    if (v.gruppo == Gruppo.investimenti && v.categoria == null) {
+      throw const ValidazioneException(
+        'Scegli una categoria per gli Investimenti',
+      );
+    }
     final nome = _nomeValido(v.nome, voci.map((x) => x.nome), 'voce');
     return Situazione(_inFondoAlGruppo(voci, v.copyWith(nome: nome)));
   }
@@ -52,13 +57,26 @@ class Situazione {
       });
 
   /// La voce va in fondo al nuovo gruppo.
-  Situazione spostaVoce(String id, Gruppo gruppo) {
+  Situazione spostaVoce(
+    String id,
+    Gruppo gruppo, {
+    CategoriaInvestimento? categoria,
+  }) {
     final v = voci.firstWhere((x) => x.id == id);
     if (v.gruppo == gruppo) return this;
+    if (gruppo == Gruppo.investimenti && categoria == null) {
+      throw const ValidazioneException(
+        'Scegli una categoria per gli Investimenti',
+      );
+    }
     return Situazione(
       _inFondoAlGruppo(
         voci.where((x) => x.id != id).toList(),
-        v.copyWith(gruppo: gruppo),
+        v.copyWith(
+          gruppo: gruppo,
+          categoria: categoria,
+          rimuoviCategoria: gruppo != Gruppo.investimenti,
+        ),
       ),
     );
   }
