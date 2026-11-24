@@ -1,0 +1,144 @@
+{
+  "voci": {
+    "Contanti": {
+      "id": "v0",
+      "nome": "Contanti",
+      "gruppo": "salvadanaio"
+    },
+    "PayPal": {
+      "id": "v1",
+      "nome": "PayPal",
+      "gruppo": "salvadanaio"
+    },
+    "Satispay": {
+      "id": "v2",
+      "nome": "Satispay",
+      "gruppo": "salvadanaio"
+    },
+    "MatchBetting": {
+      "id": "v3",
+      "nome": "MatchBetting",
+      "gruppo": "salvadanaio"
+    },
+    "Youbanking": {
+      "id": "v4",
+      "nome": "Youbanking",
+      "gruppo": "liquidita"
+    },
+    "BBVA": {
+      "id": "v5",
+      "nome": "BBVA",
+      "gruppo": "liquidita"
+    },
+    "Degiro": {
+      "id": "v6",
+      "nome": "Degiro",
+      "gruppo": "liquidita"
+    },
+    "N26": {
+      "id": "v7",
+      "nome": "N26",
+      "gruppo": "liquidita"
+    },
+    "Revolut": {
+      "id": "v8",
+      "nome": "Revolut",
+      "gruppo": "liquidita"
+    },
+    "Trade Republic": {
+      "id": "v9",
+      "nome": "Trade Republic",
+      "gruppo": "liquidita"
+    },
+    "Scalable Capital": {
+      "id": "v10",
+      "nome": "Scalable Capital",
+      "gruppo": "liquidita"
+    },
+    "Directa": {
+      "id": "v11",
+      "nome": "Directa",
+      "gruppo": "liquidita"
+    },
+    "Fideuram": {
+      "id": "v12",
+      "nome": "Fideuram",
+      "gruppo": "liquidita"
+    },
+    "Mediolanum": {
+      "id": "v13",
+      "nome": "Mediolanum",
+      "gruppo": "liquidita"
+    },
+    "P2PLanding": {
+      "id": "v14",
+      "nome": "P2PLanding",
+      "gruppo": "investimenti",
+      "categoria": "p2pLanding"
+    },
+    "Deposito Titoli – Scalable Capital": {
+      "id": "v15",
+      "nome": "Deposito Titoli – Scalable Capital",
+      "gruppo": "investimenti",
+      "categoria": "depositoTitoli"
+    },
+    "Deposito Titoli – TradeRepublic": {
+      "id": "v16",
+      "nome": "Deposito Titoli – TradeRepublic",
+      "gruppo": "investimenti",
+      "categoria": "depositoTitoli"
+    },
+    "Deposito Titoli – Directa": {
+      "id": "v17",
+      "nome": "Deposito Titoli – Directa",
+      "gruppo": "investimenti",
+      "categoria": "depositoTitoli"
+    },
+    "Deposito Titoli – DeGiro": {
+      "id": "v18",
+      "nome": "Deposito Titoli – DeGiro",
+      "gruppo": "investimenti",
+      "categoria": "depositoTitoli"
+    },
+    "Interactive Brokers": {
+      "id": "v19",
+      "nome": "Interactive Brokers",
+      "gruppo": "investimenti",
+      "categoria": "depositoTitoli"
+    },
+    "Pensionline": {
+      "id": "v20",
+      "nome": "Pensionline",
+      "gruppo": "investimenti",
+      "categoria": "pianiAccumulo"
+    },
+    "Piano Piano": {
+      "id": "v21",
+      "nome": "Piano Piano",
+      "gruppo": "investimenti",
+      "categoria": "pianiAccumulo"
+    },
+    "Crypto": {
+      "id": "v22",
+      "nome": "Crypto",
+      "gruppo": "investimenti",
+      "categoria": "crypto"
+    },
+    "Crowdfounding": {
+      "id": "v23",
+      "nome": "Crowdfounding",
+      "gruppo": "investimenti",
+      "categoria": "p2pLanding"
+    }
+  },
+  "totali": [
+    "Totale Salvadanaio",
+    "Totale Liquidità",
+    "Totale Investimenti",
+    "Totale"
+  ],
+  "ignorare": [
+    "TFR",
+    "Base Imponibile"
+  ]
+}
