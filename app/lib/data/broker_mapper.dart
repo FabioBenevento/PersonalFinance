@@ -1,3 +1,4 @@
+import '../domain/associazioni_broker.dart';
 import '../domain/broker.dart';
 
 const schemaBrokerSupportato = 1;
@@ -104,3 +105,16 @@ PosizioneBroker _posizione(Map<String, dynamic> p) {
         : null,
   );
 }
+
+AssociazioniConto associazioniFromMap(Map<String, dynamic> m) =>
+    AssociazioniConto(
+      revisione: m['revisione'] as int,
+      liquidita: m['liquidita'] as String?,
+      investimenti: m['investimenti'] as String?,
+    );
+
+Map<String, dynamic> associazioniToMap(AssociazioniConto a) => {
+  'revisione': a.revisione,
+  if (a.liquidita != null) 'liquidita': a.liquidita,
+  if (a.investimenti != null) 'investimenti': a.investimenti,
+};

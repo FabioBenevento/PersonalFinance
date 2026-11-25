@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personal_finance/data/broker_mapper.dart';
 import 'package:personal_finance/data/broker_providers.dart';
+import 'package:personal_finance/domain/associazioni_broker.dart';
 import 'package:personal_finance/domain/broker.dart';
 
 import 'fake_broker_repository.dart';
@@ -43,6 +44,16 @@ _documenti() {
 }
 
 void main() {
+  test('BRO-015 associazioni salvate con revisione e rilette', () {
+    const a = AssociazioniConto(revisione: 2, liquidita: 'l');
+    final m = associazioniToMap(a);
+    expect(m, {'revisione': 2, 'liquidita': 'l'});
+    final r = associazioniFromMap(m);
+    expect(r.revisione, 2);
+    expect(r.liquidita, 'l');
+    expect(r.investimenti, isNull);
+  });
+
   test('BRO-008 azioni ed ETF: decimali esatti, assenza distinta da zero', () {
     final p = _posizioni();
     final azione = p.firstWhere((x) => x.id == 'azione-demo');

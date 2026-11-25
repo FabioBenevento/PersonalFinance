@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/broker_providers.dart';
+import '../data/voci_providers.dart';
+import '../domain/associazioni_broker.dart';
 import '../domain/broker.dart';
+import '../domain/voce.dart';
 import 'app_theme.dart';
 import 'patrimonio_layout.dart';
 
@@ -68,12 +71,12 @@ class _Rilevazione extends StatelessWidget {
   );
 }
 
-class _Conto extends StatelessWidget {
+class _Conto extends ConsumerWidget {
   const _Conto(this.conto);
   final ContoBroker conto;
 
   @override
-  Widget build(BuildContext context) => Padding(
+  Widget build(BuildContext context, WidgetRef ref) => Padding(
     padding: const EdgeInsets.only(top: 16),
     child: DocumentoPatrimonio(
       child: Padding(
@@ -104,6 +107,7 @@ class _Conto extends StatelessWidget {
                   : 'Dati del ${_data(conto.datiIl!)}',
               style: const TextStyle(color: coloreSecondario),
             ),
+            for (final c in ComponenteBroker.values) _Associazione(conto.id, c),
             for (final l in conto.liquidita)
               Text('Liquidità ${l.importo ?? 'non disponibile'} ${l.valuta}'),
             if (conto.posizioni.isEmpty)
@@ -158,5 +162,90 @@ class _Posizione extends StatelessWidget {
           ),
       ],
     );
+  }
+}
+
+class _Associazione extends ConsumerWidget {
+  const _Associazione(this.contoId, this.componente);
+  final String contoId;
+  final ComponenteBroker componente;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final tutte = ref.watch(associazioniBrokerProvider).value ?? const {};
+    final voci = ref.watch(vociProvider).value ?? const <Voce>[];
+    final id = tutte[contoId]?.destinazione(componente);
+    final voce = voci.where((v) => v.id == id).firstOrNull;
+    final nome = componente == ComponenteBroker.liquidita
+        ? 'Liquidità'
+        : 'Investimenti';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          id == null
+              ? '$nome: non associata, nessuna proposta'
+              : '$nome → ${voce?.nome ?? 'voce non più esistente'}',
+          style: id == null ? const TextStyle(color: coloreSecondario) : null,
+        ),
+        TextButton(
+          onPressed: () => _scegli(context, ref, tutte, voci),
+          child: Text('Associa $nome'),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _scegli(
+    BuildContext context,
+    WidgetRef ref,
+    Map<String, AssociazioniConto> tutte,
+    List<Voce> voci,
+  ) async {
+    final gruppo = componente == ComponenteBroker.liquidita
+        ? Gruppo.liquidita
+        : Gruppo.investimenti;
+    final usate = {
+      for (final a in tutte.values)
+        for (final c in ComponenteBroker.values) a.destinazione(c),
+    };
+    final candidate = [
+      for (final v in voci)
+        if (v.gruppo == gruppo && !v.conDettaglio && !usate.contains(v.id)) v,
+    ];
+    final messenger = ScaffoldMessenger.of(context);
+    final scelta = await showDialog<Voce>(
+      context: context,
+      builder: (_) => SimpleDialog(
+        title: const Text('Scegli la voce'),
+        children: [
+          if (candidate.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 24),
+              child: Text('Nessuna voce semplice disponibile'),
+            ),
+          for (final v in candidate)
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(context, v),
+              child: Text(v.nome),
+            ),
+        ],
+      ),
+    );
+    if (scelta == null) return;
+    try {
+      final nuove = associa(
+        tutte: tutte,
+        contoId: contoId,
+        componente: componente,
+        voceId: scelta.id,
+        voci: voci,
+      );
+      await ref
+          .read(brokerRepositoryProvider)
+          .salvaAssociazioni(contoId, nuove);
+    } on ValidazioneException catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(e.message)));
+    }
   }
 }

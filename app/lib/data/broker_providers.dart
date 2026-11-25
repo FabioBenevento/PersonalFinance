@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../auth/auth.dart';
+import '../domain/associazioni_broker.dart';
 import '../domain/broker.dart';
 import 'broker_repository.dart';
 import 'firestore_broker_repository.dart';
@@ -17,3 +18,8 @@ final rilevazioneBrokerProvider = StreamProvider<RilevazioneBroker?>(
   (ref) => ref.watch(brokerRepositoryProvider).osservaAttiva(),
   retry: (_, _) => null,
 );
+
+final associazioniBrokerProvider =
+    StreamProvider<Map<String, AssociazioniConto>>(
+      (ref) => ref.watch(brokerRepositoryProvider).osservaAssociazioni(),
+    );

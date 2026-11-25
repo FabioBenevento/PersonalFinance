@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../domain/associazioni_broker.dart';
 import '../domain/broker.dart';
+import '../domain/voce.dart';
 import 'broker_mapper.dart';
 import 'broker_repository.dart';
 
@@ -30,4 +32,27 @@ class FirestoreBrokerRepository implements BrokerRepository {
           [for (final d in posizioni.docs) d.data()],
         );
       });
+
+  @override
+  Stream<Map<String, AssociazioniConto>> osservaAssociazioni() => _db
+      .collection('users/$uid/brokerAssociazioni')
+      .snapshots()
+      .map(
+        (s) => {for (final d in s.docs) d.id: associazioniFromMap(d.data())},
+      );
+
+  @override
+  Future<void> salvaAssociazioni(String contoId, AssociazioniConto nuove) {
+    final ref = _db.doc('users/$uid/brokerAssociazioni/$contoId');
+    return _db.runTransaction((t) async {
+      final attuale = await t.get(ref);
+      final revisione = attuale.exists
+          ? associazioniFromMap(attuale.data()!).revisione
+          : 0;
+      if (revisione != nuove.revisione - 1) {
+        throw const ValidazioneException('Associazioni modificate altrove');
+      }
+      t.set(ref, associazioniToMap(nuove));
+    });
+  }
 }

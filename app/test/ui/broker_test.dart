@@ -98,7 +98,7 @@ final _rilevazione = RilevazioneBroker(
 );
 
 Future<void> apri(WidgetTester tester, FakeBrokerRepository repo) async {
-  tester.view.physicalSize = const Size(360, 800);
+  tester.view.physicalSize = const Size(360, 2400);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
   await tester.pumpWidget(
@@ -107,6 +107,16 @@ Future<void> apri(WidgetTester tester, FakeBrokerRepository repo) async {
         authGatewayProvider.overrideWithValue(_Gateway()),
         vociRepositoryProvider.overrideWithValue(
           FakeVociRepository(const [
+            Voce.semplice(
+              id: 'li',
+              nome: 'Liquidità IBKR',
+              gruppo: Gruppo.liquidita,
+            ),
+            Voce.semplice(
+              id: 'iv',
+              nome: 'Investimenti IBKR',
+              gruppo: Gruppo.investimenti,
+            ),
             Voce.semplice(
               id: 'b',
               nome: 'BBVA',
@@ -174,5 +184,27 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Collegamento da rinnovare'), findsOneWidget);
     expect(find.text('Dati del: sconosciuta'), findsOneWidget);
+  });
+  testWidgets('BRO-015 conto non associato senza proposte, poi associazione', (
+    tester,
+  ) async {
+    final repo = FakeBrokerRepository(_rilevazione);
+    await apri(tester, repo);
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Liquidità: non associata, nessuna proposta'),
+      findsNWidgets(2),
+    );
+    await tester.tap(find.text('Associa Liquidità').first);
+    await tester.pumpAndSettle();
+    expect(find.text('Investimenti IBKR'), findsNothing);
+    await tester.tap(find.text('Liquidità IBKR'));
+    await tester.pumpAndSettle();
+    expect(find.text('Liquidità → Liquidità IBKR'), findsOneWidget);
+    expect(repo.associazioni['c1']!.revisione, 1);
+    // Una voce già usata non è più offerta all'altro conto.
+    await tester.tap(find.text('Associa Liquidità').last);
+    await tester.pumpAndSettle();
+    expect(find.text('Liquidità IBKR'), findsNothing);
   });
 }
