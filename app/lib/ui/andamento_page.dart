@@ -3,13 +3,31 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/fotografie_providers.dart';
 import '../domain/fotografia_mensile.dart';
+import '../domain/andamento.dart';
+import '../domain/importo.dart';
+import 'andamento/grafico_linee.dart';
 import 'patrimonio_layout.dart';
+import 'salva_fotografia.dart';
 
-class AndamentoPage extends ConsumerWidget {
+const _nomiPeriodo = {
+  PeriodoAndamento.dodiciMesi: '12 mesi',
+  PeriodoAndamento.annoInCorso: 'Anno in corso',
+  PeriodoAndamento.treAnni: '3 anni',
+  PeriodoAndamento.tutto: 'Tutto',
+};
+
+class AndamentoPage extends ConsumerStatefulWidget {
   const AndamentoPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AndamentoPage> createState() => _AndamentoPageState();
+}
+
+class _AndamentoPageState extends ConsumerState<AndamentoPage> {
+  var _periodo = PeriodoAndamento.tutto;
+
+  @override
+  Widget build(BuildContext context) {
     final fotografie = ref.watch(fotografieProvider);
     return Scaffold(
       appBar: AppBar(
@@ -41,5 +59,36 @@ class AndamentoPage extends ConsumerWidget {
             "Nessuna fotografia salvata: l'andamento comparirà dalla prima fotografia",
           ),
         )
-      : const SizedBox.shrink();
+      : _grafici(fotografie);
+
+  Widget _grafici(List<FotografiaMensile> fotografie) {
+    final serie = serieMensile(fotografie, _periodo, ref.watch(oggiProvider)());
+    final ultima = fotografie.reduce(
+      (a, b) => a.mese.compareTo(b.mese) >= 0 ? a : b,
+    );
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Card(
+          child: ListTile(
+            title: Text('Totale ${nomeMese(ultima.mese)}'),
+            subtitle: Text(scriviImporto(ultima.situazione.totale)),
+          ),
+        ),
+        Wrap(
+          spacing: 8,
+          children: [
+            for (final p in PeriodoAndamento.values)
+              ChoiceChip(
+                label: Text(_nomiPeriodo[p]!),
+                selected: _periodo == p,
+                onSelected: (_) => setState(() => _periodo = p),
+              ),
+          ],
+        ),
+        Text('${nomeMese(serie.first.mese)} – ${nomeMese(serie.last.mese)}'),
+        GraficoLinee(serie: serie),
+      ],
+    );
+  }
 }
