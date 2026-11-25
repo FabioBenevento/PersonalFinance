@@ -6,7 +6,8 @@ import 'app_theme.dart';
 enum Destinazione {
   situazione('Situazione', '/'),
   fotografie('Fotografie', '/fotografie'),
-  andamento('Andamento', '/andamento');
+  andamento('Andamento', '/andamento'),
+  broker('Broker', '/broker');
 
   const Destinazione(this.nome, this.path);
   final String nome;
