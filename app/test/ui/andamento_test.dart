@@ -263,4 +263,32 @@ void main() {
     expect(riga('variazione-gennaio', '+€ 500,00 · +50,00%'), findsOneWidget);
     expect(find.text('nessuna fotografia di settembre 2025'), findsOneWidget);
   });
+
+  testWidgets('AND-017 uso dal telefono', (tester) async {
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await apriAndamento(tester);
+    expect(tester.takeException(), isNull);
+    expect(
+      find.byWidgetPredicate(
+        (w) => w is Scrollable && w.axisDirection == AxisDirection.right,
+      ),
+      findsNothing,
+    );
+    final x = <double>{};
+    for (final k in [
+      'variazione-precedente',
+      'variazione-gennaio',
+      'variazione-anno',
+      'torta-gruppi',
+      'torta-categorie',
+    ]) {
+      final f = find.byKey(ValueKey(k));
+      await tester.scrollUntilVisible(f, 200);
+      x.add(tester.getTopLeft(f).dx);
+    }
+    expect(tester.takeException(), isNull);
+    expect(x.length, 1);
+  });
 }

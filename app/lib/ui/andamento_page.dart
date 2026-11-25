@@ -104,9 +104,11 @@ class _AndamentoPageState extends ConsumerState<AndamentoPage> {
         const SizedBox(height: 16),
         RiquadriVariazioni(variazioni: variazioni(fotografie)!),
         const SizedBox(height: 16),
-        Row(
+        Wrap(
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: 8,
           children: [
-            const Text('Composizione di '),
+            const Text('Composizione di'),
             DropdownButton<Mese>(
               key: const ValueKey('selettore-mese'),
               value: scelta.mese,
