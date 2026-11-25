@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/broker_providers.dart';
+import '../data/operazioni_coordinator.dart';
 import '../data/voci_providers.dart';
 import '../domain/associazioni_broker.dart';
 import '../domain/broker.dart';
@@ -31,6 +32,7 @@ class _AnteprimaBrokerState extends ConsumerState<AnteprimaBroker> {
   final _selezionate = <ComponenteBroker>{};
   // Una sola operazione per anteprima: un doppio invio non applica due volte.
   late final _operazioneId = ref.read(vociRepositoryProvider).nuovoId();
+  late final _repository = ref.read(brokerRepositoryProvider);
   var _inCorso = false;
   String? _errore;
   var _conflitto = false;
@@ -92,27 +94,24 @@ class _AnteprimaBrokerState extends ConsumerState<AnteprimaBroker> {
       _errore = null;
     });
     try {
-      await ref
-          .read(brokerRepositoryProvider)
-          .confermaSaldi(
-            ConfermaBroker(
-              operazioneId: _operazioneId,
-              rilevazioneId: widget.rilevazioneId,
-              associazioni: {conto.id: assoc},
-              saldi: [
-                for (final c in ComponenteBroker.values)
-                  if (_selezionate.contains(c))
-                    SaldoDaConfermare(
-                      contoId: conto.id,
-                      componente: c,
-                      voce: voci.firstWhere(
-                        (v) => v.id == assoc.destinazione(c),
-                      ),
-                      proposto: proposta.di(c).centesimi!,
-                    ),
-              ],
-            ),
-          );
+      await ref.read(confermaBrokerProvider)(
+        _repository,
+        ConfermaBroker(
+          operazioneId: _operazioneId,
+          rilevazioneId: widget.rilevazioneId,
+          associazioni: {conto.id: assoc},
+          saldi: [
+            for (final c in ComponenteBroker.values)
+              if (_selezionate.contains(c))
+                SaldoDaConfermare(
+                  contoId: conto.id,
+                  componente: c,
+                  voce: voci.firstWhere((v) => v.id == assoc.destinazione(c)),
+                  proposto: proposta.di(c).centesimi!,
+                ),
+          ],
+        ),
+      );
       navigator.pop();
       messenger.showSnackBar(const SnackBar(content: Text('Saldi aggiornati')));
     } on ConflittoConfermaException {
@@ -122,6 +121,13 @@ class _AnteprimaBrokerState extends ConsumerState<AnteprimaBroker> {
           _inCorso = false;
           _conflitto = true;
           _errore = 'I dati sono cambiati: nessun saldo aggiornato. Chiudi e apri una nuova anteprima.';
+        });
+      }
+    } on ModificheBloccateException {
+      if (mounted) {
+        setState(() {
+          _inCorso = false;
+          _errore = 'Fotografia in corso: riprova tra un momento.';
         });
       }
     } catch (_) {
