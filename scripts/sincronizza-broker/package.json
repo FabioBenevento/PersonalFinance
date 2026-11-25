@@ -1,0 +1,13 @@
+{
+  "name": "sincronizza-broker",
+  "private": true,
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "start": "node cli.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.10.0",
+    "snaptrade-typescript-sdk": "13.4.11"
+  }
+}
