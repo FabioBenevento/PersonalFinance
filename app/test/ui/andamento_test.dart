@@ -125,7 +125,7 @@ void main() {
   }
 
   LineChartData dati(WidgetTester tester) =>
-      tester.widget<LineChart>(find.byType(LineChart)).data;
+      tester.widget<LineChart>(find.byType(LineChart).first).data;
 
   testWidgets('AND-007 cambio del periodo', (tester) async {
     await apriAndamento(tester);
@@ -146,14 +146,121 @@ void main() {
     expect(dati(tester).lineBarsData, hasLength(3));
     expect(dati(tester).lineBarsData.first.spots[2].isNull(), isTrue);
 
-    final box = tester.getRect(find.byType(LineChart));
+    final box = tester.getRect(find.byType(LineChart).first);
     await tester.tapAt(Offset(box.right - 12, box.center.dy));
     await tester.pumpAndSettle();
     expect(find.textContaining('Novembre 2026'), findsWidgets);
     expect(find.textContaining('€ 7.000,00'), findsWidgets);
 
-    await tester.tap(find.text('Investimenti'));
+    await tester.tap(find.widgetWithText(FilterChip, 'Investimenti'));
     await tester.pumpAndSettle();
     expect(dati(tester).lineBarsData, hasLength(2));
+  });
+
+  Future<void> alto(WidgetTester tester) async {
+    tester.view.physicalSize = const Size(800, 4000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+  }
+
+  Finder riga(String chiave, String testo) => find.descendant(
+    of: find.byKey(ValueKey(chiave)),
+    matching: find.text(testo),
+  );
+
+  List<double> valori(WidgetTester tester, String chiave) => tester
+      .widget<PieChart>(
+        find.descendant(
+          of: find.byKey(ValueKey(chiave)),
+          matching: find.byType(PieChart),
+        ),
+      )
+      .data
+      .sections
+      .map((s) => s.value)
+      .toList();
+
+  testWidgets('AND-010 composizione dell\'ultima fotografia', (tester) async {
+    await alto(tester);
+    await apriAndamento(tester);
+    expect(find.byType(LineChart), findsNWidgets(2));
+    expect(valori(tester, 'torta-gruppi'), [0, 3000, 7000]);
+    expect(riga('torta-gruppi', '€ 3.000,00  30,00%'), findsOneWidget);
+    expect(riga('torta-gruppi', '€ 7.000,00  70,00%'), findsOneWidget);
+    expect(valori(tester, 'torta-categorie'), [7000, 0, 0, 0]);
+    expect(riga('torta-categorie', '€ 7.000,00  100,00%'), findsOneWidget);
+  });
+
+  testWidgets('AND-011 scelta di un altro mese', (tester) async {
+    await alto(tester);
+    await apriAndamento(tester);
+    await tester.tap(find.byKey(const ValueKey('selettore-mese')));
+    await tester.pumpAndSettle();
+    expect(find.text('Febbraio 2023'), findsNothing);
+    await tester.tap(find.text('Gennaio 2022').last);
+    await tester.pumpAndSettle();
+    expect(valori(tester, 'torta-gruppi'), [0, 1000, 5000]);
+    expect(valori(tester, 'torta-categorie'), [5000, 0, 0, 0]);
+    expect(riga('torta-categorie', '€ 5.000,00  100,00%'), findsOneWidget);
+  });
+
+  testWidgets('AND-012 categorie non disponibili', (tester) async {
+    await alto(tester);
+    final repo = FakeFotografieRepository();
+    repo.fotografie[Mese(2026, 11).id] = FotografiaMensile(
+      mese: Mese(2026, 11),
+      versioneSchema: 1,
+      voci: [
+        Voce.semplice(
+          id: 'b',
+          nome: 'BBVA',
+          gruppo: Gruppo.liquidita,
+          saldoCentesimi: 300000,
+        ),
+        Voce.semplice(
+          id: 'e',
+          nome: 'ETF',
+          gruppo: Gruppo.investimenti,
+          saldoCentesimi: 700000,
+        ),
+      ],
+    );
+    await pump(tester, authenticated: true, repository: repo);
+    await tester.tap(find.text('Andamento'));
+    await tester.pumpAndSettle();
+    expect(valori(tester, 'torta-gruppi'), [0, 3000, 7000]);
+    expect(find.byKey(const ValueKey('torta-categorie')), findsNothing);
+    expect(
+      find.text('Riepilogo per categoria non disponibile'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('AND-014 mese di confronto mancante', (tester) async {
+    await alto(tester);
+    final repo = FakeFotografieRepository();
+    for (final (m, importo) in [
+      (Mese(2026, 1), 100000),
+      (Mese(2026, 9), 150000),
+    ]) {
+      repo.fotografie[m.id] = FotografiaMensile(
+        mese: m,
+        voci: [
+          Voce.semplice(
+            id: 'b',
+            nome: 'BBVA',
+            gruppo: Gruppo.liquidita,
+            saldoCentesimi: importo,
+          ),
+        ],
+      );
+    }
+    await pump(tester, authenticated: true, repository: repo);
+    await tester.tap(find.text('Andamento'));
+    await tester.pumpAndSettle();
+    expect(riga('variazione-precedente', '—'), findsOneWidget);
+    expect(find.text('nessuna fotografia di agosto 2026'), findsOneWidget);
+    expect(riga('variazione-gennaio', '+€ 500,00 · +50,00%'), findsOneWidget);
+    expect(find.text('nessuna fotografia di settembre 2025'), findsOneWidget);
   });
 }

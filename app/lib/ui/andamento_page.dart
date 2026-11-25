@@ -5,7 +5,11 @@ import '../data/fotografie_providers.dart';
 import '../domain/fotografia_mensile.dart';
 import '../domain/andamento.dart';
 import '../domain/importo.dart';
+import '../domain/mese.dart';
+import 'andamento/composizione_torte.dart';
+import 'andamento/grafico_area.dart';
 import 'andamento/grafico_linee.dart';
+import 'andamento/riquadri_variazioni.dart';
 import 'patrimonio_layout.dart';
 import 'salva_fotografia.dart';
 
@@ -25,6 +29,7 @@ class AndamentoPage extends ConsumerStatefulWidget {
 
 class _AndamentoPageState extends ConsumerState<AndamentoPage> {
   var _periodo = PeriodoAndamento.tutto;
+  Mese? _meseTorte;
 
   @override
   Widget build(BuildContext context) {
@@ -66,6 +71,11 @@ class _AndamentoPageState extends ConsumerState<AndamentoPage> {
     final ultima = fotografie.reduce(
       (a, b) => a.mese.compareTo(b.mese) >= 0 ? a : b,
     );
+    final mesi = [...fotografie]..sort((a, b) => b.mese.compareTo(a.mese));
+    final scelta = mesi.firstWhere(
+      (f) => f.mese == _meseTorte,
+      orElse: () => mesi.first,
+    );
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -88,6 +98,30 @@ class _AndamentoPageState extends ConsumerState<AndamentoPage> {
         ),
         Text('${nomeMese(serie.first.mese)} – ${nomeMese(serie.last.mese)}'),
         GraficoLinee(serie: serie),
+        const SizedBox(height: 16),
+        const Text('Investimenti per categoria'),
+        GraficoArea(serie: serie),
+        const SizedBox(height: 16),
+        RiquadriVariazioni(variazioni: variazioni(fotografie)!),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            const Text('Composizione di '),
+            DropdownButton<Mese>(
+              key: const ValueKey('selettore-mese'),
+              value: scelta.mese,
+              items: [
+                for (final f in mesi)
+                  DropdownMenuItem(
+                    value: f.mese,
+                    child: Text(nomeMese(f.mese)),
+                  ),
+              ],
+              onChanged: (m) => setState(() => _meseTorte = m),
+            ),
+          ],
+        ),
+        ComposizioneTorte(composizione: composizione(scelta)),
       ],
     );
   }
