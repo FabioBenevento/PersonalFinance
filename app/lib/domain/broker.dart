@@ -32,6 +32,7 @@ class PosizioneBroker {
     required this.quantita,
     required this.prezzo,
     required this.valore,
+    this.equivalenteLiquidita,
     this.opzione,
   });
   final String id;
@@ -42,6 +43,9 @@ class PosizioneBroker {
   final String? quantita;
   final String? prezzo;
   final String? valore;
+
+  /// true: gia incluso nella liquidita; null: il fornitore non lo dice.
+  final bool? equivalenteLiquidita;
   final OpzioneBroker? opzione;
 
   /// Una posizione con tipo sconosciuto o dati mancanti resta consultabile ma

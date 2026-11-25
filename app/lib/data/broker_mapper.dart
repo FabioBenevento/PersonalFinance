@@ -89,6 +89,7 @@ PosizioneBroker _posizione(Map<String, dynamic> p) {
     quantita: p['quantita'] as String?,
     prezzo: p['prezzo'] as String?,
     valore: p['valore'] as String?,
+    equivalenteLiquidita: p['equivalenteLiquidita'] as bool?,
     opzione: o is Map
         ? OpzioneBroker(
             sottostanteSimbolo:
