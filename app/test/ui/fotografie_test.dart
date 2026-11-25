@@ -428,10 +428,11 @@ void main() {
     tester,
   ) async {
     final repo = FakeFotografieRepository(_voci)
-      ..errore = StateError('offline');
+      ..errore = Exception('failed-precondition');
     await pump(tester, repo);
     await tester.tap(find.byTooltip('Fotografie mensili'));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
     expect(
       find.text('Impossibile leggere le fotografie, riprova'),
       findsOneWidget,

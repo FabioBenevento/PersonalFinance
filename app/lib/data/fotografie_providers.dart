@@ -12,8 +12,11 @@ final fotografieRepositoryProvider = Provider<FotografieRepository>((ref) {
   return FirestoreFotografieRepository(auth.uid);
 });
 
+// Firestore reconnects on its own: Riverpod's automatic retry would only keep
+// the page loading for ~40 s before showing the error.
 final fotografieProvider = StreamProvider<List<FotografiaMensile>>(
   (ref) => ref.watch(fotografieRepositoryProvider).osserva(),
+  retry: (_, _) => null,
 );
 
 final fotografieServiceProvider = Provider<FotografieService>(

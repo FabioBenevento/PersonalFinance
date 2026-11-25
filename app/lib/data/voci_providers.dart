@@ -40,15 +40,19 @@ final operazioniCoordinatorProvider = Provider<OperazioniCoordinator>((ref) {
 
 final vociProvider = StreamProvider<List<Voce>>(
   (ref) => ref.watch(vociRepositoryProvider).osserva(),
+  retry: (_, _) => null,
 );
 
 /// Ids of the voci waiting for the server to confirm a write.
 final vociInAttesaProvider = StreamProvider<Set<String>>(
   (ref) => ref.watch(vociRepositoryProvider).osservaInAttesa(),
+  retry: (_, _) => null,
 );
 
 /// One-time initial load of the signed-in user's voci; the Situazione waits for it.
-final inizializzazioneProvider = FutureProvider<void>((ref) async {
+final inizializzazioneProvider = FutureProvider<void>(retry: (_, _) => null, (
+  ref,
+) async {
   final service = InizializzazioneService(ref.watch(vociRepositoryProvider));
   await service.inizializzaSeNecessario(vociIniziali);
 });
