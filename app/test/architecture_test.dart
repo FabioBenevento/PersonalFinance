@@ -23,6 +23,10 @@ void main() {
     expect(offenders, isEmpty);
   });
 
+  test('tool does not import Flutter or Firebase, so dart run works', () {
+    expect(_offenders('tool', _forbidden), isEmpty);
+  });
+
   test('lib/domain does not import fl_chart', () {
     expect(_offenders('lib/domain', _chart), isEmpty);
   });
