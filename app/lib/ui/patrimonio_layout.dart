@@ -58,9 +58,15 @@ class PatrimonioLayout extends StatelessWidget {
     String path,
     bool selected,
   ) => TextButton(
-    style: TextButton.styleFrom(
-      backgroundColor: selected ? coloreSelezione : null,
-    ),
+    style:
+        TextButton.styleFrom(
+          shape: const RoundedRectangleBorder(),
+          foregroundColor: selected ? coloreAzione : coloreSecondario,
+        ).copyWith(
+          side: WidgetStatePropertyAll(
+            BorderSide(color: selected ? coloreAzione : coloreSuperficie),
+          ),
+        ),
     onPressed: () => context.go(path),
     child: Text(nome),
   );
@@ -75,7 +81,7 @@ class DocumentoPatrimonio extends StatelessWidget {
     color: coloreSuperficie,
     shape: RoundedRectangleBorder(
       side: const BorderSide(color: coloreBordo),
-      borderRadius: BorderRadius.circular(4),
+      borderRadius: BorderRadius.circular(raggio),
     ),
     child: child,
   );

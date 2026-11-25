@@ -47,7 +47,7 @@ class SituazionePage extends ConsumerWidget {
               onPressed: bloccato ? null : () => aggiungiVoce(context, ref),
               child: const Text(
                 'Aggiungi voce',
-                style: TextStyle(color: coloreSuperficie),
+                style: TextStyle(color: coloreTesto),
               ),
             ),
           if (MediaQuery.sizeOf(context).width < 700)
@@ -59,10 +59,7 @@ class SituazionePage extends ConsumerWidget {
           else
             TextButton(
               onPressed: ref.read(authGatewayProvider).signOut,
-              child: const Text(
-                'Esci',
-                style: TextStyle(color: coloreSuperficie),
-              ),
+              child: const Text('Esci', style: TextStyle(color: coloreTesto)),
             ),
         ],
       ),

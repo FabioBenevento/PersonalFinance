@@ -3,14 +3,10 @@ import 'package:flutter/material.dart';
 
 import '../../domain/andamento.dart';
 import '../../domain/voce.dart';
+import '../app_theme.dart';
 import '../etichette.dart';
 
-List<Color> coloriSerie(ColorScheme c) => [
-  c.primary,
-  c.secondary,
-  c.tertiary,
-  c.onSurfaceVariant,
-];
+List<Color> coloriSerie(ColorScheme c) => coloriSerieGrafici;
 
 /// Area impilata degli Investimenti per categoria; i mesi senza fotografia o
 /// di schema 1 interrompono l'area.
