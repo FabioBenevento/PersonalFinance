@@ -1,0 +1,11 @@
+{
+  "accounts": [{"id":"conto-demo","name":"Conto dimostrativo","institution_name":"Broker demo","brokerage_authorization":"connessione-demo","sync_status":{"holdings":{"initial_sync_completed":true,"last_successful_sync":"2026-11-24T18:00:00Z"}}}],
+  "balances": [{"currency":{"code":"EUR"},"cash":100,"buying_power":9999}],
+  "positions": {"data_freshness":{"as_of":"2026-11-24T18:01:00Z"},"results":[
+    {"instrument":{"id":"azione-demo","kind":"stock","symbol":"DEMO","description":"Azione demo"},"units":"1.123456789012345678","price":"10.00","currency":"EUR","cash_equivalent":false},
+    {"instrument":{"id":"etf-demo","kind":"etf","symbol":"ETF","description":"ETF demo"},"units":"0.5","price":"0","currency":"EUR"},
+    {"instrument":{"id":"call-demo","kind":"option","symbol":"DEMO CALL","option_type":"CALL","strike_price":"125.50","expiration_date":"2027-01-15","multiplier":"100","underlying":{"id":"azione-demo","symbol":"DEMO","kind":"stock"}},"units":"2","price":"3.25","currency":"USD"},
+    {"instrument":{"id":"put-demo","kind":"option","symbol":"DEMO PUT","option_type":"PUT","strike_price":"100","expiration_date":"2027-02-19","multiplier":"10","underlying":{"id":"azione-demo","symbol":"DEMO","kind":"stock"}},"units":"-3","price":"1.50","currency":"USD"},
+    {"instrument":{"id":"ignoto-demo","kind":"future","symbol":"FUT"},"units":null,"price":null,"currency":null}
+  ]}
+}

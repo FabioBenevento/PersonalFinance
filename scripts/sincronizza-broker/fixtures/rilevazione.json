@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "lettaIl": "2026-11-25T12:00:00.000Z",
+  "conti": [{
+    "id": "conto-demo", "broker": "Broker demo", "nome": "Conto dimostrativo",
+    "collegamentoId": "connessione-demo", "statoCollegamento": "sconosciuto",
+    "datiIl": "2026-11-24T18:00:00Z", "posizioniDatiIl": "2026-11-24T18:01:00Z",
+    "liquidita": [{"valuta": "EUR", "importo": "100"}],
+    "posizioni": [
+      {"id":"azione-demo","simbolo":"DEMO","descrizione":"Azione demo","tipo":"azione","valuta":"EUR","quantita":"1.123456789012345678","prezzo":"10.00","valore":null,"equivalenteLiquidita":false,"opzione":null},
+      {"id":"etf-demo","simbolo":"ETF","descrizione":"ETF demo","tipo":"etf","valuta":"EUR","quantita":"0.5","prezzo":"0","valore":null,"equivalenteLiquidita":null,"opzione":null},
+      {"id":"call-demo","simbolo":"DEMO CALL","descrizione":null,"tipo":"opzione","valuta":"USD","quantita":"2","prezzo":"3.25","valore":null,"equivalenteLiquidita":null,"opzione":{"sottostante":{"id":"azione-demo","simbolo":"DEMO"},"tipo":"call","strike":"125.50","scadenza":"2027-01-15","moltiplicatore":"100"}},
+      {"id":"put-demo","simbolo":"DEMO PUT","descrizione":null,"tipo":"opzione","valuta":"USD","quantita":"-3","prezzo":"1.50","valore":null,"equivalenteLiquidita":null,"opzione":{"sottostante":{"id":"azione-demo","simbolo":"DEMO"},"tipo":"put","strike":"100","scadenza":"2027-02-19","moltiplicatore":"10"}},
+      {"id":"ignoto-demo","simbolo":"FUT","descrizione":null,"tipo":"sconosciuto","valuta":null,"quantita":null,"prezzo":null,"valore":null,"equivalenteLiquidita":null,"opzione":null}
+    ]
+  }]
+}
