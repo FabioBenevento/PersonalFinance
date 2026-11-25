@@ -9,11 +9,15 @@ function decimal(value) {
 
 function posizione(raw) {
   const instrument = raw.instrument ?? {};
+  // Senza id la posizione non e identificabile: la rilevazione non e valida.
+  if (typeof instrument.id !== 'string' || instrument.id.length === 0) {
+    throw new ErroreSorgente('dati-non-validi');
+  }
   const tipo = ['stock', 'etf', 'option'].includes(instrument.kind)
     ? { stock: 'azione', etf: 'etf', option: 'opzione' }[instrument.kind]
     : 'sconosciuto';
   return {
-    id: instrument.id ?? null,
+    id: instrument.id,
     simbolo: instrument.symbol ?? null,
     descrizione: instrument.description ?? null,
     tipo,
@@ -103,9 +107,21 @@ function creaSorgenteSnapTrade({ sdk, autenticazione, accountIds }) {
     },
   };
 }
+// L'adattatore riceve solo i metodi di lettura usati: il trading dell'SDK non e raggiungibile.
+function soloLettura(sdk) {
+  const { accountInformation: a, connections: c } = sdk;
+  return {
+    accountInformation: {
+      listUserAccounts: params => a.listUserAccounts(params),
+      getUserAccountBalance: params => a.getUserAccountBalance(params),
+      getAllAccountPositions: params => a.getAllAccountPositions(params),
+    },
+    connections: { detailBrokerageAuthorization: params => c.detailBrokerageAuthorization(params) },
+  };
+}
 function creaSorgentePersonal(config) {
   const { Snaptrade, SnaptradeAuth } = require('snaptrade-typescript-sdk');
   const sdk = new Snaptrade({ auth: SnaptradeAuth.personalApiKey(config.snaptrade) });
-  return creaSorgenteSnapTrade({ sdk, autenticazione: {}, accountIds: config.accountIds });
+  return creaSorgenteSnapTrade({ sdk: soloLettura(sdk), autenticazione: {}, accountIds: config.accountIds });
 }
-module.exports = { creaSorgenteSnapTrade, creaSorgentePersonal };
+module.exports = { creaSorgenteSnapTrade, creaSorgentePersonal, soloLettura };

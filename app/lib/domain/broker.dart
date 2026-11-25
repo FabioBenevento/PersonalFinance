@@ -3,7 +3,9 @@
 /// dato assente, mai zero.
 enum TipoPosizione { azione, etf, opzione, sconosciuto }
 
-enum StatoCollegamento { attivo, daRinnovare, sconosciuto }
+/// Node non pubblica mai conti con collegamento da rinnovare (BRO-023): la
+/// rilevazione e completa o non viene attivata.
+enum StatoCollegamento { attivo, sconosciuto }
 
 enum TipoOpzione { call, put }
 
@@ -72,6 +74,7 @@ class ContoBroker {
     required this.datiIl,
     required this.liquidita,
     required this.posizioni,
+    this.posizioniDatiIl,
   });
   final String id;
   final String? broker;
@@ -81,6 +84,9 @@ class ContoBroker {
   /// Data dei dati comunicata dal fornitore; null se sconosciuta. Non e mai
   /// sostituita dalla data della lettura.
   final DateTime? datiIl;
+
+  /// Data delle posizioni comunicata dal fornitore, distinta da [datiIl].
+  final DateTime? posizioniDatiIl;
   final List<LiquiditaBroker> liquidita;
   final List<PosizioneBroker> posizioni;
 

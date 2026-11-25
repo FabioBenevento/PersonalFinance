@@ -60,17 +60,24 @@ class FirestoreBrokerRepository implements BrokerRepository {
   }
 
   @override
-  Future<void> confermaSaldi(ConfermaBroker c) async {
-    if (c.saldi.isEmpty || c.saldi.any((s) => s.proposto < 0)) {
+  Future<bool> confermaSaldi(ConfermaBroker c) async {
+    if (c.saldi.isEmpty ||
+        c.saldi.any((s) => s.proposto < 0) ||
+        c.saldi.map((s) => s.voce.id).toSet().length != c.saldi.length) {
       throw const ValidazioneException('Selezione non valida');
     }
     final ricevuta = _db.doc('users/$uid/brokerApplicazioni/${c.operazioneId}');
     // Come per le fotografie: il conflitto esce dalla callback, perche sul web
     // l'errore della transazione arriva avvolto.
     String? conflitto;
+    var applicata = true;
     await _db.runTransaction<void>((t) async {
       conflitto = null;
-      if ((await t.get(ricevuta)).exists) return; // gia applicata
+      applicata = true;
+      if ((await t.get(ricevuta)).exists) {
+        applicata = false; // gia applicata
+        return;
+      }
       final stato = await t.get(_db.doc('users/$uid/brokerStato/snaptrade'));
       if (stato.data()?['attivaId'] != c.rilevazioneId) {
         conflitto = 'Rilevazione cambiata';
@@ -126,5 +133,6 @@ class FirestoreBrokerRepository implements BrokerRepository {
       });
     });
     if (conflitto != null) throw ConflittoConfermaException(conflitto!);
+    return applicata;
   }
 }

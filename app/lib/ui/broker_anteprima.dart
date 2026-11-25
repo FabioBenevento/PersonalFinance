@@ -1,3 +1,4 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -130,13 +131,28 @@ class _AnteprimaBrokerState extends ConsumerState<AnteprimaBroker> {
           _errore = 'Fotografia in corso: riprova tra un momento.';
         });
       }
+    } on FirebaseException catch (e) {
+      final rete = const {'unavailable', 'deadline-exceeded'}.contains(e.code);
+      _fallita(
+        rete
+            ? 'Conferma non riuscita: serve la connessione. Riprova.'
+            : 'Conferma rifiutata dal server (${e.code}). Riprova più tardi.',
+      );
+    } on StateError {
+      _fallita(
+        'Questa anteprima appartiene a un altro utente: chiudila e riaprila.',
+      );
     } catch (_) {
-      if (mounted) {
-        setState(() {
-          _inCorso = false;
-          _errore = 'Conferma non riuscita: serve la connessione. Riprova.';
-        });
-      }
+      _fallita('Conferma non riuscita per un errore imprevisto. Riprova.');
+    }
+  }
+
+  void _fallita(String messaggio) {
+    if (mounted) {
+      setState(() {
+        _inCorso = false;
+        _errore = messaggio;
+      });
     }
   }
 

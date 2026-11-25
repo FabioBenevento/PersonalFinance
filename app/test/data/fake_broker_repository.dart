@@ -44,8 +44,9 @@ class FakeBrokerRepository implements BrokerRepository {
   Object? erroreConferma;
 
   @override
-  Future<void> confermaSaldi(ConfermaBroker conferma) async {
+  Future<bool> confermaSaldi(ConfermaBroker conferma) async {
     if (erroreConferma != null) throw erroreConferma!;
     conferme.add(conferma);
+    return true;
   }
 }

@@ -18,6 +18,18 @@ async function registraTentativoFallito(db, { uid }, error, { clock = () => new 
     { ultimoTentativo: { esito: 'errore', codice, il: clock().toISOString() } }, { merge: true });
 }
 
+// Keeps only the active generation. Best effort: the new one is already active, so a failure
+// here must not turn the publication into an error.
+async function ripulisciGenerazioni(db, percorso, attivaId) {
+  try {
+    for (const ref of await db.collection(percorso).listDocuments()) {
+      if (ref.id !== attivaId) await db.recursiveDelete(ref);
+    }
+  } catch {
+    console.error('Pulizia delle generazioni precedenti non completata');
+  }
+}
+
 // Loads an immutable generation, checks its manifest, then activates it only if the
 // pointer read at the start is unchanged. Any failure leaves the active pointer alone.
 async function pubblicaRilevazione(db, destinazione, rilevazione, { clock = () => new Date(), dopoCaricamento } = {}) {
@@ -63,6 +75,7 @@ async function pubblicaRilevazione(db, destinazione, rilevazione, { clock = () =
         ultimoTentativo: { esito: 'ok', codice: null, il: clock().toISOString() },
       }, { merge: true });
     });
+    await ripulisciGenerazioni(db, `${base}/brokerRilevazioni`, id);
     return { id };
   } catch (error) {
     await registraTentativoFallito(db, destinazione, error, { clock });

@@ -91,11 +91,11 @@ void main() {
     expect(p.firstWhere((x) => x.id == 'azione-demo').valorizzabile, isTrue);
   });
 
-  test('BRO-023 data assente resta assente e collegamento da rinnovare non e proponibile', () {
+  test('BRO-023 data assente resta assente e collegamento non attivo non e proponibile', () {
     final f = _fixture();
     final conto = Map<String, dynamic>.from((f['conti'] as List).single as Map)
       ..['datiIl'] = null
-      ..['statoCollegamento'] = 'da-rinnovare';
+      ..['statoCollegamento'] = 'altro';
     final r = rilevazioneFromJson({
       ...f,
       'conti': [conto],
@@ -105,7 +105,19 @@ void main() {
     expect(r.conti.single.proponibile, isFalse);
     final attivo = rilevazioneFromJson(_fixture()).conti.single;
     expect(attivo.datiIl, DateTime.utc(2026, 11, 24, 18));
+    expect(attivo.posizioniDatiIl, DateTime.utc(2026, 11, 24, 18, 1));
     expect(attivo.proponibile, isTrue);
+  });
+
+  test('BRO-010 nome conto assente non fa cadere la rilevazione', () {
+    final f = _fixture();
+    final conto = Map<String, dynamic>.from((f['conti'] as List).single as Map)
+      ..['nome'] = null;
+    final r = rilevazioneFromJson({
+      ...f,
+      'conti': [conto],
+    });
+    expect(r.conti.single.nome, 'Nome non disponibile');
   });
 
   test(

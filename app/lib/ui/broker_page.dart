@@ -98,15 +98,19 @@ class _Conto extends ConsumerWidget {
               ),
             if (conto.stato != StatoCollegamento.attivo)
               Text(
-                conto.stato == StatoCollegamento.daRinnovare
-                    ? 'Collegamento da rinnovare'
-                    : 'Stato del collegamento sconosciuto',
+                'Stato del collegamento sconosciuto',
                 style: const TextStyle(color: coloreNegativo),
               ),
             Text(
               conto.datiIl == null
                   ? 'Dati del: sconosciuta'
                   : 'Dati del ${_data(conto.datiIl!)}',
+              style: const TextStyle(color: coloreSecondario),
+            ),
+            Text(
+              conto.posizioniDatiIl == null
+                  ? 'Posizioni del: sconosciuta'
+                  : 'Posizioni del ${_data(conto.posizioniDatiIl!)}',
               style: const TextStyle(color: coloreSecondario),
             ),
             for (final c in ComponenteBroker.values) _Associazione(conto.id, c),

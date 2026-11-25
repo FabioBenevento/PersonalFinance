@@ -24,7 +24,10 @@ async function sincronizza(file, { creaSorgente = creaSorgentePersonal, creaDb =
   try {
     rilevazione = await leggiRilevazione(creaSorgente(config));
   } catch (error) {
-    await registraTentativoFallito(db, destinazione, error).catch(() => {});
+    // The original error stays the outcome; a failed attempt record is only reported by code.
+    await registraTentativoFallito(db, destinazione, error).catch(() => {
+      console.error('Registrazione del tentativo non riuscita: tentativo-non-registrato');
+    });
     throw error;
   }
   const { id } = await pubblicaRilevazione(db, destinazione, rilevazione);
@@ -40,7 +43,7 @@ Uso: npm start -- --config <file-privato-esterno>
   --config  Legge i conti selezionati e pubblica la rilevazione su Firestore.
 
 Configurazione: vedi CONFIGURAZIONE.md. Nessuna credenziale viene stampata.
-Verifiche locali: npm ci; npm test (senza accessi esterni).
+Verifiche locali: npm ci; scripts/verify.sh (senza emulatore) o scripts/verify.sh --completo (con emulatore).
 `);
     return;
   }

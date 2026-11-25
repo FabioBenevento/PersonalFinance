@@ -98,3 +98,13 @@ test('BRO-024 destinazione errata: nessuna scrittura', async () => {
   assert.equal((await db.collection(`${base}/brokerRilevazioni`).get()).size, 0);
   assert.equal((await db.doc(`${base}/brokerStato/snaptrade`).get()).exists, false);
 });
+
+test('BRO-021 dopo l\'attivazione restano solo la generazione attiva e il suo contenuto', async () => {
+  await pubblicaRilevazione(db, dest, rilevazione([conto('c1', [pos])]), { clock });
+  const cattiva = rilevazione([conto('c1', [pos]), conto('', [])]);
+  await assert.rejects(pubblicaRilevazione(db, dest, cattiva, { clock }), /dati-non-validi/);
+  const { id } = await pubblicaRilevazione(db, dest, rilevazione([conto('c2', [pos])]), { clock });
+  const ids = (await db.collection(`${base}/brokerRilevazioni`).listDocuments()).map((d) => d.id);
+  assert.deepEqual(ids, [id]);
+  assert.equal((await db.collection(`${base}/brokerRilevazioni/${id}/posizioni`).get()).size, 1);
+});

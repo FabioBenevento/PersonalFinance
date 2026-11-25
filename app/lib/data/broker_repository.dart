@@ -18,7 +18,7 @@ abstract interface class BrokerRepository {
   /// Applica online, in un'unica transazione, i saldi di [conferma] e la
   /// ricevuta, solo se rilevazione attiva, associazioni e voci coincidono con
   /// l'anteprima; altrimenti [ConflittoConfermaException] senza scritture.
-  /// La stessa operazione gia applicata non viene riapplicata. Mai accodata
-  /// offline: senza rete fallisce.
-  Future<void> confermaSaldi(ConfermaBroker conferma);
+  /// La stessa operazione gia applicata non viene riapplicata (ritorna false;
+  /// true se applicata ora). Mai accodata offline: senza rete fallisce.
+  Future<bool> confermaSaldi(ConfermaBroker conferma);
 }

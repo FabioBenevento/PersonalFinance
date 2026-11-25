@@ -25,9 +25,9 @@ class _Gateway implements AuthGateway {
 class _Lento extends FakeBrokerRepository {
   final gate = Completer<void>();
   @override
-  Future<void> confermaSaldi(ConfermaBroker c) async {
+  Future<bool> confermaSaldi(ConfermaBroker c) async {
     await gate.future;
-    await super.confermaSaldi(c);
+    return super.confermaSaldi(c);
   }
 }
 

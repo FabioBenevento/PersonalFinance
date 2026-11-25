@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const {
   initializeTestEnvironment, assertFails, assertSucceeds,
 } = require('@firebase/rules-unit-testing');
-const { doc, getDoc, setDoc, deleteDoc } = require('firebase/firestore');
+const { doc, getDoc, setDoc, deleteDoc, serverTimestamp } = require('firebase/firestore');
 
 let env;
 before(async () => {
@@ -132,12 +132,20 @@ test('BRO-022 associazioni e ricevute: struttura valida, ricevute immutabili', a
   await assertFails(setDoc(a, { revisione: 0 }));
   await assertFails(setDoc(a, { revisione: 'x' }));
   await assertFails(setDoc(a, { revisione: 3, liquidita: 5 }));
+  await assertFails(setDoc(a, { revisione: 2 }));
+  await assertFails(setDoc(a, { revisione: 4 }));
+  await assertFails(setDoc(a, { revisione: 3, liquidita: '' }));
+  await assertFails(setDoc(a, { revisione: 3, liquidita: 'a/b' }));
+  await assertFails(setDoc(a, { revisione: 3, investimenti: 'x'.repeat(129) }));
+  await assertSucceeds(setDoc(a, { revisione: 3, liquidita: 'Voce_1-a' }));
+  await assertFails(setDoc(doc(d, 'users/ok/brokerAssociazioni/c2'), { revisione: 2 }));
   await assertFails(setDoc(a, { revisione: 3, extra: 1 }));
   await assertFails(setDoc(doc(db('ok'), 'users/altro/brokerAssociazioni/c1'), { revisione: 1 }));
   const r = doc(d, 'users/ok/brokerApplicazioni/o1');
-  const ricevuta = { rilevazione: 'r1', applicataAt: 'ts', conti: { c1: 100 } };
+  const ricevuta = { rilevazione: 'r1', applicataAt: serverTimestamp(), conti: { c1: 100 } };
   await assertFails(setDoc(doc(d, 'users/ok/brokerApplicazioni/o2'), { rilevazione: 'r1' }));
   await assertFails(setDoc(doc(d, 'users/ok/brokerApplicazioni/o2'), { ...ricevuta, token: 's' }));
+  await assertFails(setDoc(doc(d, 'users/ok/brokerApplicazioni/o2'), { ...ricevuta, applicataAt: 'ts' }));
   await assertSucceeds(setDoc(r, ricevuta));
   await assertFails(setDoc(r, ricevuta));
   await assertFails(deleteDoc(r));

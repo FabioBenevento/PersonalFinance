@@ -56,13 +56,13 @@ RilevazioneBroker rilevazioneDaDocumenti(
 ContoBroker _conto(Map<String, dynamic> c) => ContoBroker(
   id: c['id'] as String,
   broker: c['broker'] as String?,
-  nome: c['nome'] as String,
+  nome: (c['nome'] as String?) ?? 'Nome non disponibile',
   stato: switch (c['statoCollegamento']) {
     'attivo' => StatoCollegamento.attivo,
-    'da-rinnovare' => StatoCollegamento.daRinnovare,
     _ => StatoCollegamento.sconosciuto,
   },
   datiIl: _data(c['datiIl']),
+  posizioniDatiIl: _data(c['posizioniDatiIl']),
   liquidita: [
     for (final l in (c['liquidita'] as List? ?? const []))
       LiquiditaBroker(

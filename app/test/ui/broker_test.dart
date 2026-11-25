@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -46,6 +47,7 @@ final _rilevazione = RilevazioneBroker(
       nome: 'Conto principale con un nome davvero molto lungo da gestire',
       stato: StatoCollegamento.attivo,
       datiIl: DateTime(2026, 11, 24),
+      posizioniDatiIl: DateTime(2026, 11, 25),
       liquidita: const [LiquiditaBroker(valuta: 'EUR', importo: '1234.50')],
       posizioni: const [
         PosizioneBroker(
@@ -91,7 +93,7 @@ final _rilevazione = RilevazioneBroker(
       id: 'c2',
       broker: 'DEGIRO',
       nome: 'DEGIRO',
-      stato: StatoCollegamento.daRinnovare,
+      stato: StatoCollegamento.sconosciuto,
       datiIl: null,
       liquidita: const [],
       posizioni: const [],
@@ -180,13 +182,15 @@ void main() {
     expect(find.text('Impossibile leggere i dati dei broker'), findsOneWidget);
   });
 
-  testWidgets('BRO-023 collegamento da rinnovare e data sconosciuta', (
+  testWidgets('BRO-023 collegamento non attivo e data sconosciuta', (
     tester,
   ) async {
     await apri(tester, FakeBrokerRepository(_rilevazione));
     await tester.pumpAndSettle();
-    expect(find.text('Collegamento da rinnovare'), findsOneWidget);
+    expect(find.text('Stato del collegamento sconosciuto'), findsOneWidget);
     expect(find.text('Dati del: sconosciuta'), findsOneWidget);
+    expect(find.text('Posizioni del: sconosciuta'), findsOneWidget);
+    expect(find.text('Posizioni del 25/11/2026'), findsOneWidget);
   });
   testWidgets('BRO-015 conto non associato senza proposte, poi associazione', (
     tester,
@@ -356,7 +360,10 @@ void anteprimaTests() {
     tester,
   ) async {
     final repo = await _apriAnteprima(tester)
-      ..erroreConferma = StateError('offline');
+      ..erroreConferma = FirebaseException(
+        plugin: 'cloud_firestore',
+        code: 'unavailable',
+      );
     await tester.tap(find.byType(CheckboxListTile).first);
     await tester.pump();
     await tester.tap(find.widgetWithText(TextButton, 'Conferma'));
@@ -366,5 +373,31 @@ void anteprimaTests() {
     await tester.tap(find.widgetWithText(TextButton, 'Conferma'));
     await tester.pumpAndSettle();
     expect(repo.conferme, hasLength(1));
+  });
+
+  testWidgets('SIT-BRO-006 anteprima di un altro utente: messaggio dedicato', (
+    tester,
+  ) async {
+    final repo = await _apriAnteprima(tester);
+    repo.erroreConferma = StateError('Anteprima di un altro utente');
+    await tester.tap(find.byType(CheckboxListTile).first);
+    await tester.pump();
+    await tester.tap(find.widgetWithText(TextButton, 'Conferma'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('altro utente'), findsOneWidget);
+    expect(find.textContaining('serve la connessione'), findsNothing);
+  });
+
+  testWidgets('SIT-BRO-004 errore imprevisto: nessun rimando alla connessione', (
+    tester,
+  ) async {
+    final repo = await _apriAnteprima(tester);
+    repo.erroreConferma = const FormatException('x');
+    await tester.tap(find.byType(CheckboxListTile).first);
+    await tester.pump();
+    await tester.tap(find.widgetWithText(TextButton, 'Conferma'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('imprevisto'), findsOneWidget);
+    expect(find.textContaining('serve la connessione'), findsNothing);
   });
 }

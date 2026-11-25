@@ -62,3 +62,23 @@ test('BRO-024 progetto o uid diversi dalla configurazione sono rifiutati senza a
   assert.equal(await esegui(config({ projectId: 'demo-personal-finance', uid: 'u2' }), () => ({ leggi: async () => conti })), 1);
   assert.equal(await attiva(), undefined);
 });
+
+test('BRO-011 se il tentativo non si registra l\'esito resta l\'errore originale e il codice va su stderr', async () => {
+  const righe = [];
+  const originale = console.error;
+  console.error = (m) => righe.push(String(m));
+  const dbRotto = (projectId) => {
+    const db = creaDb(projectId);
+    const doc = db.doc.bind(db);
+    db.doc = (p) => (p.includes('brokerStato') ? { set: async () => { throw new Error('SEGRETO'); } } : doc(p));
+    return db;
+  };
+  let code;
+  try {
+    code = await esegui(config(), () => ({ leggi: async () => { throw new ErroreSorgente('rete'); } }), dbRotto);
+  } finally { console.error = originale; }
+  assert.equal(code, 1);
+  assert.ok(righe.some((r) => r.includes('rete')));
+  assert.ok(righe.some((r) => r.includes('tentativo-non-registrato')));
+  assert.ok(!righe.join('\n').includes('SEGRETO'));
+});

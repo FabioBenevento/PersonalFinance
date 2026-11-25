@@ -222,6 +222,25 @@ void main() {
       },
     );
 
+    test('SIT-BRO-002 la stessa voce piu volte e rifiutata', () async {
+      final doppia = ConfermaBroker(
+        operazioneId: op,
+        rilevazioneId: 'g1',
+        associazioni: conferma.associazioni,
+        saldi: [conferma.saldi.first, conferma.saldi.first],
+      );
+      await expectLater(
+        repo.confermaSaldi(doppia),
+        throwsA(isA<ValidazioneException>()),
+      );
+      await nessunaScrittura();
+    });
+
+    test('SIT-BRO-004 il ritorno distingue applicata ora da gia applicata', () async {
+      expect(await repo.confermaSaldi(conferma), isTrue);
+      expect(await repo.confermaSaldi(conferma), isFalse);
+    });
+
     test('SIT-BRO-002 conferma di piu saldi insieme', () async {
       await repo.confermaSaldi(conferma);
       expect(await saldo(liqId), 1500);

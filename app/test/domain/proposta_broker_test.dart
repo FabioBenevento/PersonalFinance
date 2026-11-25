@@ -100,7 +100,7 @@ void main() {
       conto(liquidita: [const LiquiditaBroker(valuta: 'EUR', importo: null)]),
     );
     expect(senzaCash.liquidita.proponibile, isFalse);
-    final nonAttivo = proponi(conto(stato: StatoCollegamento.daRinnovare));
+    final nonAttivo = proponi(conto(stato: StatoCollegamento.sconosciuto));
     expect(nonAttivo.liquidita.proponibile, isFalse);
     expect(nonAttivo.investimenti.proponibile, isFalse);
   });

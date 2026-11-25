@@ -128,3 +128,22 @@ test('BRO-001 BRO-008 BRO-009 contratto condiviso tramite SDK Personal e traspor
   const alternate = { async leggi() { return structuredClone(expected.conti); } };
   assert.deepEqual(await leggiRilevazione(alternate, { clock }), expected);
 });
+
+test('BRO-010 posizione senza id rende la lettura non valida', async () => {
+  const data = structuredClone(fixture);
+  delete data.positions.results[0].instrument.id;
+  await assert.rejects(leggiRilevazione(sorgente(data).adapter, { clock }), { codice: 'dati-non-validi' });
+});
+
+test('BRO-003 l\'adattatore non raggiunge i metodi di trading dell\'SDK', () => {
+  const noop = async () => ({ data: [] });
+  const sdk = {
+    accountInformation: { listUserAccounts: noop, getUserAccountBalance: noop, getAllAccountPositions: noop, getUserAccountOrders: noop },
+    connections: { detailBrokerageAuthorization: noop, removeBrokerageAuthorization: noop },
+    trading: { placeForceOrder: noop },
+  };
+  const ristretto = require('./snaptrade').soloLettura(sdk);
+  assert.deepEqual(Object.keys(ristretto), ['accountInformation', 'connections']);
+  assert.deepEqual(Object.keys(ristretto.accountInformation), ['listUserAccounts', 'getUserAccountBalance', 'getAllAccountPositions']);
+  assert.deepEqual(Object.keys(ristretto.connections), ['detailBrokerageAuthorization']);
+});

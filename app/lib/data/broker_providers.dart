@@ -33,7 +33,7 @@ final associazioniBrokerProvider =
 /// aperta l'anteprima: se l'utente e cambiato non e piu applicabile.
 final confermaBrokerProvider =
     Provider<
-      Future<void> Function(
+      Future<bool> Function(
         BrokerRepository repositoryAnteprima,
         ConfermaBroker,
       )
@@ -47,6 +47,6 @@ final confermaBrokerProvider =
                 )) {
                   throw StateError('Anteprima di un altro utente');
                 }
-                await repositoryAnteprima.confermaSaldi(conferma);
+                return repositoryAnteprima.confermaSaldi(conferma);
               }),
     );
