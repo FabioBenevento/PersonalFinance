@@ -59,9 +59,10 @@ class PatrimonioLayout extends StatelessWidget {
   ) => DecoratedBox(
     decoration: BoxDecoration(
       border: Border(
-        bottom: selected
-            ? const BorderSide(width: 2, color: coloreAzione)
-            : BorderSide.none,
+        bottom: BorderSide(
+          width: 2,
+          color: selected ? coloreAzione : coloreTrasparente,
+        ),
       ),
     ),
     child: TextButton(

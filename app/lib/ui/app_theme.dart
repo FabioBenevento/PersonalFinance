@@ -10,6 +10,7 @@ const colorePositivo = Color(0xFF3DDC97);
 const coloreNegativo = Color(0xFFFF7A6B);
 const coloreSelezione = Color(0xFF1C2A26);
 const coloreSuTesto = Color(0xFF0E1513);
+const coloreTrasparente = Color(0x00000000);
 const coloriSerieGrafici = [
   Color(0xFF3DDC97),
   Color(0xFF5AB8F0),
