@@ -3,7 +3,7 @@
   "lettaIl": "2026-11-25T12:00:00.000Z",
   "conti": [{
     "id": "conto-demo", "broker": "Broker demo", "nome": "Conto dimostrativo",
-    "collegamentoId": "connessione-demo", "statoCollegamento": "sconosciuto",
+    "collegamentoId": "connessione-demo", "statoCollegamento": "attivo",
     "datiIl": "2026-11-24T18:00:00Z", "posizioniDatiIl": "2026-11-24T18:01:00Z",
     "liquidita": [{"valuta": "EUR", "importo": "100"}],
     "posizioni": [

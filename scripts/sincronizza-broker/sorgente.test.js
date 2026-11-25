@@ -16,7 +16,9 @@ const { creaSorgenteSnapTrade } = require('./snaptrade');
 const fixture = require('./fixtures/snaptrade.json');
 function sorgente(data = fixture) {
   const calls = [];
-  const sdk = { accountInformation: {
+  const sdk = { connections: {
+    async detailBrokerageAuthorization() { return { data: { id: 'connessione-demo', type: 'read', disabled: false } }; },
+  }, accountInformation: {
     async listUserAccounts(params) { calls.push(['conti', params]); return { data: data.accounts }; },
     async getUserAccountBalance(params) { calls.push(['cash', params]); return { data: data.balances }; },
     async getAllAccountPositions(params) { calls.push(['posizioni', params]); return { data: data.positions }; },
@@ -111,7 +113,8 @@ test('BRO-001 BRO-008 BRO-009 contratto condiviso tramite SDK Personal e traspor
       adapter: async config => {
         const pathname = new URL(config.url).pathname;
         requests.push([config.method, pathname]);
-        const data = pathname.endsWith('/positions/all') ? fixture.positions
+        const data = pathname.startsWith('/authorizations/') ? { id: 'connessione-demo', type: 'read', disabled: false }
+          : pathname.endsWith('/positions/all') ? fixture.positions
           : pathname.endsWith('/balances') ? fixture.balances : fixture.accounts;
         return { data, status: 200, statusText: 'OK', headers: {}, config };
       },
@@ -120,7 +123,7 @@ test('BRO-001 BRO-008 BRO-009 contratto condiviso tramite SDK Personal e traspor
   const adapter = creaSorgenteSnapTrade({ sdk, autenticazione: {} });
   assert.deepEqual(await leggiRilevazione(adapter, { clock }), expected);
   assert.deepEqual(requests, [
-    ['get', '/accounts'], ['get', '/accounts/conto-demo/balances'], ['get', '/accounts/conto-demo/positions/all'],
+    ['get', '/accounts'], ['get', '/authorizations/connessione-demo'], ['get', '/accounts/conto-demo/balances'], ['get', '/accounts/conto-demo/positions/all'],
   ]);
   const alternate = { async leggi() { return structuredClone(expected.conti); } };
   assert.deepEqual(await leggiRilevazione(alternate, { clock }), expected);

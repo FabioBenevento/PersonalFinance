@@ -42,15 +42,35 @@ function lista(data) {
   return data;
 }
 
-function creaSorgenteSnapTrade({ sdk, autenticazione }) {
+function creaSorgenteSnapTrade({ sdk, autenticazione, accountIds }) {
   return {
     async leggi() {
       try {
         const accounts = lista((await sdk.accountInformation.listUserAccounts(autenticazione)).data);
+        if (accountIds && accountIds.some(id => !accounts.some(account => account.id === id))) {
+          throw new ErroreSorgente('conto-non-disponibile');
+        }
         const conti = [];
+        const connections = new Map();
         for (const account of accounts) {
+          if (accountIds && !accountIds.includes(account.id)) continue;
           if (typeof account.id !== 'string' || account.id.length === 0) {
             throw new ErroreSorgente('dati-non-validi');
+          }
+          const authorizationId = account.brokerage_authorization;
+          if (typeof authorizationId !== 'string' || !authorizationId) {
+            throw new ErroreSorgente('permessi-non-ammessi');
+          }
+          if (!connections.has(authorizationId)) {
+            const connection = (await sdk.connections.detailBrokerageAuthorization({
+              ...autenticazione, authorizationId,
+            })).data;
+            if (connection?.id !== authorizationId || connection?.type !== 'read') {
+              throw new ErroreSorgente('permessi-non-ammessi');
+            }
+            if (connection.disabled === true) throw new ErroreSorgente('collegamento-da-rinnovare');
+            if (connection.disabled !== false) throw new ErroreSorgente('stato-collegamento-sconosciuto');
+            connections.set(authorizationId, connection);
           }
           const holdings = account.sync_status?.holdings;
           if (holdings?.initial_sync_completed === false || holdings?.holdings_unavailable === true) {
@@ -64,7 +84,7 @@ function creaSorgenteSnapTrade({ sdk, autenticazione }) {
             broker: account.institution_name ?? null,
             nome: account.name ?? null,
             collegamentoId: account.brokerage_authorization ?? null,
-            statoCollegamento: 'sconosciuto',
+            statoCollegamento: 'attivo',
             datiIl: holdings?.last_successful_sync ?? null,
             posizioniDatiIl: positions?.data_freshness?.as_of ?? null,
             liquidita: balances.map(balance => ({
@@ -77,9 +97,15 @@ function creaSorgenteSnapTrade({ sdk, autenticazione }) {
         return conti;
       } catch (error) {
         if (error instanceof ErroreSorgente) throw error;
-        throw new ErroreSorgente('lettura-fallita');
+        const status = error?.response?.status;
+        throw new ErroreSorgente([402, 429].includes(status) ? 'limite-fornitore' : 'lettura-fallita');
       }
     },
   };
 }
-module.exports = { creaSorgenteSnapTrade };
+function creaSorgentePersonal(config) {
+  const { Snaptrade, SnaptradeAuth } = require('snaptrade-typescript-sdk');
+  const sdk = new Snaptrade({ auth: SnaptradeAuth.personalApiKey(config.snaptrade) });
+  return creaSorgenteSnapTrade({ sdk, autenticazione: {}, accountIds: config.accountIds });
+}
+module.exports = { creaSorgenteSnapTrade, creaSorgentePersonal };
