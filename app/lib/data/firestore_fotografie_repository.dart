@@ -17,14 +17,11 @@ class FirestoreFotografieRepository implements FotografieRepository {
       _db.collection('users/$uid/fotografie');
 
   @override
-  Stream<List<FotografiaMensile>> osserva() => _fotografie
-      .orderBy(FieldPath.documentId, descending: true)
-      .snapshots()
-      .map(
-        (snapshot) => [
-          for (final d in snapshot.docs) fotografiaFromMap(d.id, d.data()),
-        ],
-      );
+  Stream<List<FotografiaMensile>> osserva() => _fotografie.snapshots().map(
+    (snapshot) => [
+      for (final d in snapshot.docs) fotografiaFromMap(d.id, d.data()),
+    ],
+  );
 
   @override
   Future<FotografiaMensile?> leggi(Mese mese) async {
