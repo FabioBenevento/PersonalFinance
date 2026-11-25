@@ -31,9 +31,9 @@ class PatrimonioLayout extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Row(
+            spacing: 8,
             children: [
-              for (final d in Destinazione.values) ...[
-                if (d != Destinazione.situazione) const SizedBox(width: 8),
+              for (final d in Destinazione.values)
                 Expanded(
                   child: _destinazione(
                     context,
@@ -42,7 +42,6 @@ class PatrimonioLayout extends StatelessWidget {
                     d == destinazione,
                   ),
                 ),
-              ],
             ],
           ),
         ),
@@ -57,18 +56,22 @@ class PatrimonioLayout extends StatelessWidget {
     String nome,
     String path,
     bool selected,
-  ) => TextButton(
-    style:
-        TextButton.styleFrom(
-          shape: const RoundedRectangleBorder(),
-          foregroundColor: selected ? coloreAzione : coloreSecondario,
-        ).copyWith(
-          side: WidgetStatePropertyAll(
-            BorderSide(color: selected ? coloreAzione : coloreSuperficie),
-          ),
-        ),
-    onPressed: () => context.go(path),
-    child: Text(nome),
+  ) => DecoratedBox(
+    decoration: BoxDecoration(
+      border: Border(
+        bottom: selected
+            ? const BorderSide(width: 2, color: coloreAzione)
+            : BorderSide.none,
+      ),
+    ),
+    child: TextButton(
+      style: TextButton.styleFrom(
+        shape: const RoundedRectangleBorder(),
+        foregroundColor: selected ? coloreAzione : coloreSecondario,
+      ),
+      onPressed: () => context.go(path),
+      child: Text(nome),
+    ),
   );
 }
 

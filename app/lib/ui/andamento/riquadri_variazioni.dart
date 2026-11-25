@@ -2,10 +2,14 @@ import 'package:flutter/material.dart';
 
 import '../../domain/andamento.dart';
 import '../../domain/importo.dart';
-import '../salva_fotografia.dart';
+import '../app_theme.dart';
+import '../etichette.dart';
 
-String _firmato(String Function(int) scrivi, int v) =>
-    '${v < 0 ? '-' : '+'}${scrivi(v.abs())}';
+/// Valore con segno e colore, dedotti dal valore stesso.
+TextSpan _firmato(String Function(int) scrivi, int v) => TextSpan(
+  text: '${v < 0 ? '-' : '+'}${scrivi(v.abs())}',
+  style: stileImporto.copyWith(color: v < 0 ? coloreNegativo : colorePositivo),
+);
 
 /// Variazione del Totale rispetto a un mese di confronto.
 class _Riquadro extends StatelessWidget {
@@ -33,9 +37,17 @@ class _Riquadro extends StatelessWidget {
                     ),
                   ],
                 )
-              : Text(
-                  '${_firmato(scriviImporto, d)} · '
-                  '${p == null ? '—' : _firmato(scriviPercentuale, p)}',
+              : Text.rich(
+                  TextSpan(
+                    children: [
+                      _firmato(scriviImporto, d),
+                      const TextSpan(text: ' · '),
+                      if (p == null)
+                        const TextSpan(text: '—', style: stileImporto)
+                      else
+                        _firmato(scriviPercentuale, p),
+                    ],
+                  ),
                 ),
         ),
       ),

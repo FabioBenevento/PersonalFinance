@@ -180,4 +180,57 @@ void main() {
       expect(variazioni([]), isNull);
     },
   );
+
+  test('cumulato per categoria, anche con categorie nascoste', () {
+    final p = serieMensile(
+      [
+        foto(2026, 1, inv: [100, 200, 300, 400]),
+      ],
+      PeriodoAndamento.tutto,
+      DateTime(2026, 1, 15),
+    ).single;
+    expect(CategoriaInvestimento.values.map(p.cumulato), [100, 300, 600, 1000]);
+    expect(
+      p.cumulato(
+        CategoriaInvestimento.depositoTitoli,
+        nascoste: {CategoriaInvestimento.p2pLanding},
+      ),
+      400,
+    );
+    final v1 = serieMensile(
+      [foto(2026, 1, schema: 1)],
+      PeriodoAndamento.tutto,
+      DateTime(2026, 1, 15),
+    ).single;
+    expect(v1.cumulato(CategoriaInvestimento.crypto), isNull);
+  });
+
+  test('ultimaFotografia e finestra con fotografia dopo oggi', () {
+    expect(ultimaFotografia([]), isNull);
+    final f = [foto(2026, 3), foto(2026, 12), foto(2026, 5)];
+    expect(ultimaFotografia(f)!.mese, Mese(2026, 12));
+    final serie = serieMensile(
+      [foto(2027, 2)],
+      PeriodoAndamento.annoInCorso,
+      DateTime(2026, 11, 24),
+    );
+    expect(serie.last.mese, Mese(2027, 2));
+    expect(serie.first.mese, Mese(2026, 1));
+    expect(
+      serieMensile(
+        [foto(2027, 2)],
+        PeriodoAndamento.tutto,
+        DateTime(2026, 11),
+      ).single.mese,
+      Mese(2027, 2),
+    );
+  });
+
+  test('percentuale con segno proprio se la base è negativa', () {
+    final v = variazioni([
+      foto(2026, 2, liquidita: -500),
+      foto(2026, 1, liquidita: -1000),
+    ])!;
+    expect([v.precedente.differenza, v.precedente.percentuale], [500, -5000]);
+  });
 }

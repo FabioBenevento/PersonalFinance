@@ -125,7 +125,7 @@ void main() {
   }
 
   LineChartData dati(WidgetTester tester) =>
-      tester.widget<LineChart>(find.byType(LineChart).first).data;
+      tester.widget<LineChart>(find.byType(LineChart).at(1)).data;
 
   testWidgets('AND-007 cambio del periodo', (tester) async {
     await apriAndamento(tester);
@@ -139,14 +139,30 @@ void main() {
     expect(dati(tester).lineBarsData.first.spots, hasLength(12));
   });
 
+  testWidgets('riquadro del Totale con sparkline degli ultimi 24 mesi', (
+    tester,
+  ) async {
+    await apriAndamento(tester);
+    final spark = tester.widget<LineChart>(
+      find.descendant(
+        of: find.byKey(const ValueKey('sparkline-totale')),
+        matching: find.byType(LineChart),
+      ),
+    );
+    expect(spark.data.lineBarsData.single.spots, hasLength(24));
+  });
+
   testWidgets('AND-016 valore al tocco e legenda', (tester) async {
+    tester.view.physicalSize = const Size(800, 4000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
     await apriAndamento(tester);
     await tester.tap(find.text('12 mesi'));
     await tester.pumpAndSettle();
     expect(dati(tester).lineBarsData, hasLength(3));
     expect(dati(tester).lineBarsData.first.spots[2].isNull(), isTrue);
 
-    final box = tester.getRect(find.byType(LineChart).first);
+    final box = tester.getRect(find.byType(LineChart).at(1));
     await tester.tapAt(Offset(box.right - 12, box.center.dy));
     await tester.pumpAndSettle();
     expect(find.textContaining('Novembre 2026'), findsWidgets);
@@ -183,7 +199,7 @@ void main() {
   testWidgets('AND-010 composizione dell\'ultima fotografia', (tester) async {
     await alto(tester);
     await apriAndamento(tester);
-    expect(find.byType(LineChart), findsNWidgets(2));
+    expect(find.byType(LineChart), findsNWidgets(3));
     expect(valori(tester, 'torta-gruppi'), [0, 3000, 7000]);
     expect(riga('torta-gruppi', '€ 3.000,00  30,00%'), findsOneWidget);
     expect(riga('torta-gruppi', '€ 7.000,00  70,00%'), findsOneWidget);

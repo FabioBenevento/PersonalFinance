@@ -20,10 +20,30 @@ class PuntoMensile {
   final int? liquiditaConSalvadanaio;
   final int? investimenti;
   final Map<CategoriaInvestimento, int>? categorie;
+
+  /// Somma delle categorie fino a [fino] (in ordine di enum), escluse le
+  /// [nascoste]; null se il mese non ha categorie.
+  int? cumulato(
+    CategoriaInvestimento fino, {
+    Set<CategoriaInvestimento> nascoste = const {},
+  }) {
+    final c = categorie;
+    if (c == null) return null;
+    return CategoriaInvestimento.values
+        .take(fino.index + 1)
+        .where((k) => !nascoste.contains(k))
+        .fold<int>(0, (s, k) => s + c[k]!);
+  }
 }
 
 int _indice(Mese m) => m.anno * 12 + m.mese - 1;
 Mese _daIndice(int i) => Mese(i ~/ 12, i % 12 + 1);
+
+/// Fotografia del mese più recente; null senza fotografie.
+FotografiaMensile? ultimaFotografia(List<FotografiaMensile> fotografie) =>
+    fotografie.isEmpty
+    ? null
+    : fotografie.reduce((a, b) => a.mese.compareTo(b.mese) >= 0 ? a : b);
 
 /// Un punto per ogni mese della finestra del [periodo], fino al mese di [oggi].
 /// Con [PeriodoAndamento.tutto] e nessuna fotografia la serie è vuota.
@@ -32,7 +52,12 @@ List<PuntoMensile> serieMensile(
   PeriodoAndamento periodo,
   DateTime oggi,
 ) {
-  final fine = _indice(Mese(oggi.year, oggi.month));
+  // La finestra arriva almeno all'ultima fotografia, anche se è futura.
+  final ultimo = ultimaFotografia(fotografie);
+  final fine = [
+    _indice(Mese(oggi.year, oggi.month)),
+    if (ultimo != null) _indice(ultimo.mese),
+  ].reduce((a, b) => a > b ? a : b);
   final int inizio;
   switch (periodo) {
     case PeriodoAndamento.dodiciMesi:
@@ -132,10 +157,8 @@ class VariazioniTotale {
 
 /// Variazioni del Totale dell'ultima fotografia; null senza fotografie.
 VariazioniTotale? variazioni(List<FotografiaMensile> fotografie) {
-  if (fotografie.isEmpty) return null;
-  final ultima = fotografie.reduce(
-    (a, b) => a.mese.compareTo(b.mese) >= 0 ? a : b,
-  );
+  final ultima = ultimaFotografia(fotografie);
+  if (ultima == null) return null;
   final m = ultima.mese;
   final totale = ultima.situazione.totale;
   Variazione confronta(Mese c) {

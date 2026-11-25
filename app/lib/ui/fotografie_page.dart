@@ -11,7 +11,6 @@ import 'app_theme.dart';
 import 'etichette.dart';
 import 'patrimonio_layout.dart';
 import 'riepilogo_categorie.dart';
-import 'salva_fotografia.dart';
 
 class FotografiePage extends ConsumerWidget {
   const FotografiePage({super.key, this.meseId});

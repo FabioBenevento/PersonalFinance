@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 
 import '../../domain/andamento.dart';
 import '../../domain/importo.dart';
-import '../salva_fotografia.dart';
+import '../app_theme.dart';
+import '../etichette.dart';
+import 'elementi_grafico.dart';
 
 enum _Serie {
   totale('Totale'),
@@ -38,16 +40,16 @@ class _GraficoLineeState extends State<GraficoLinee> {
   @override
   void didUpdateWidget(GraficoLinee old) {
     super.didUpdateWidget(old);
-    if (old.serie.length != widget.serie.length) _selezionato = null;
+    if (old.serie.length != widget.serie.length ||
+        old.serie.firstOrNull?.mese != widget.serie.firstOrNull?.mese) {
+      _selezionato = null;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final colori = Theme.of(context).colorScheme;
     final tinte = {
-      _Serie.totale: colori.primary,
-      _Serie.liquidita: colori.secondary,
-      _Serie.investimenti: colori.tertiary,
+      for (final s in _Serie.values) s: coloriSerieGrafici[s.index],
     };
     final visibili = [
       for (final s in _Serie.values)
@@ -65,20 +67,15 @@ class _GraficoLineeState extends State<GraficoLinee> {
           child: LineChart(
             LineChartData(
               minY: 0,
-              titlesData: const FlTitlesData(
-                topTitles: AxisTitles(),
-                rightTitles: AxisTitles(),
-                bottomTitles: AxisTitles(),
-                leftTitles: AxisTitles(),
-              ),
+              titlesData: assiGrafico(widget.serie),
               lineTouchData: LineTouchData(
                 touchSpotThreshold: 10000,
                 touchTooltipData: const LineTouchTooltipData(
-                  getTooltipItems: _nessunTooltip,
+                  getTooltipItems: nessunTooltip,
                 ),
                 touchCallback: (event, risposta) {
                   final spot = risposta?.lineBarSpots?.firstOrNull;
-                  if (event is FlTapUpEvent && spot != null) {
+                  if (eventoDiSelezione(event) && spot != null) {
                     setState(() => _selezionato = spot.spotIndex);
                   }
                 },
@@ -104,30 +101,30 @@ class _GraficoLineeState extends State<GraficoLinee> {
           spacing: 8,
           children: [
             for (final s in _Serie.values)
-              FilterChip(
-                label: Text(s.nome),
-                avatar: CircleAvatar(backgroundColor: tinte[s], radius: 5),
-                selected: !_nascoste.contains(s),
-                showCheckmark: false,
-                onSelected: (visibile) => setState(
-                  () => visibile ? _nascoste.remove(s) : _nascoste.add(s),
-                ),
+              VoceLegenda(
+                colore: tinte[s]!,
+                etichetta: s.nome,
+                visibile: !_nascoste.contains(s),
+                onCambia: (v) =>
+                    setState(() => v ? _nascoste.remove(s) : _nascoste.add(s)),
               ),
           ],
         ),
-        if (punto != null) ...[
-          const SizedBox(height: 8),
-          Text(nomeMese(punto.mese)),
-          for (final s in visibili)
-            Text(
-              '${s.nome}: ${s.valore(punto) == null ? '—' : scriviImporto(s.valore(punto)!)}',
-            ),
-        ],
+        if (punto != null)
+          DettaglioSelezione(
+            titolo: nomeMese(punto.mese),
+            voci: [
+              for (final s in visibili)
+                (
+                  nome: s.nome,
+                  importo: switch (s.valore(punto)) {
+                    final v? => scriviImporto(v),
+                    null => '—',
+                  },
+                ),
+            ],
+          ),
       ],
     );
   }
 }
-
-List<LineTooltipItem?> _nessunTooltip(List<LineBarSpot> spots) => [
-  for (final _ in spots) null,
-];

@@ -8,23 +8,7 @@ import '../data/voci_providers.dart';
 import '../domain/fotografia_mensile.dart';
 import '../domain/mese.dart';
 import '../domain/voce.dart';
-
-const nomiMesi = [
-  'Gennaio',
-  'Febbraio',
-  'Marzo',
-  'Aprile',
-  'Maggio',
-  'Giugno',
-  'Luglio',
-  'Agosto',
-  'Settembre',
-  'Ottobre',
-  'Novembre',
-  'Dicembre',
-];
-
-String nomeMese(Mese mese) => '${nomiMesi[mese.mese - 1]} ${mese.anno}';
+import 'etichette.dart';
 
 class SalvaFotografiaButton extends ConsumerStatefulWidget {
   const SalvaFotografiaButton({super.key});

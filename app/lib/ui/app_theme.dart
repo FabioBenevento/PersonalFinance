@@ -17,16 +17,15 @@ const coloriSerieGrafici = [
   Color(0xFFF2C14E),
 ];
 const raggio = 6.0;
-const stileCifre = TextStyle(
+const stileImporto = TextStyle(
   fontFamily: 'JetBrains Mono',
   fontFeatures: [FontFeature.tabularFigures()],
 );
-final stileImporto = stileCifre;
-final stileImportoPiccolo = stileCifre.copyWith(fontSize: 12);
+final stileImportoPiccolo = stileImporto.copyWith(fontSize: 12);
 final stileImportoSecondario = stileImportoPiccolo.copyWith(
   color: coloreSecondario,
 );
-final stileTotale = stileCifre.copyWith(
+final stileTotale = stileImporto.copyWith(
   fontSize: 30,
   fontWeight: FontWeight.bold,
 );

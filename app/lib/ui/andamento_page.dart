@@ -1,3 +1,6 @@
+import 'dart:math';
+
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -11,7 +14,8 @@ import 'andamento/grafico_area.dart';
 import 'andamento/grafico_linee.dart';
 import 'andamento/riquadri_variazioni.dart';
 import 'patrimonio_layout.dart';
-import 'salva_fotografia.dart';
+import 'app_theme.dart';
+import 'etichette.dart';
 
 const _nomiPeriodo = {
   PeriodoAndamento.dodiciMesi: '12 mesi',
@@ -67,10 +71,11 @@ class _AndamentoPageState extends ConsumerState<AndamentoPage> {
       : _grafici(fotografie);
 
   Widget _grafici(List<FotografiaMensile> fotografie) {
-    final serie = serieMensile(fotografie, _periodo, ref.watch(oggiProvider)());
-    final ultima = fotografie.reduce(
-      (a, b) => a.mese.compareTo(b.mese) >= 0 ? a : b,
-    );
+    final ultima = ultimaFotografia(fotografie)!;
+    final oggi = ref.watch(oggiProvider)();
+    final serie = serieMensile(fotografie, _periodo, oggi);
+    final recente = serieMensile(fotografie, PeriodoAndamento.tutto, oggi);
+    final ultimi24 = recente.sublist(max(0, recente.length - 24));
     final mesi = [...fotografie]..sort((a, b) => b.mese.compareTo(a.mese));
     final scelta = mesi.firstWhere(
       (f) => f.mese == _meseTorte,
@@ -82,7 +87,38 @@ class _AndamentoPageState extends ConsumerState<AndamentoPage> {
         Card(
           child: ListTile(
             title: Text('Totale ${nomeMese(ultima.mese)}'),
-            subtitle: Text(scriviImporto(ultima.situazione.totale)),
+            subtitle: Text(
+              scriviImporto(ultima.situazione.totale),
+              style: stileTotale,
+            ),
+            trailing: SizedBox(
+              key: const ValueKey('sparkline-totale'),
+              width: 96,
+              height: 40,
+              child: LineChart(
+                LineChartData(
+                  minY: 0,
+                  titlesData: const FlTitlesData(show: false),
+                  gridData: const FlGridData(show: false),
+                  borderData: FlBorderData(show: false),
+                  lineTouchData: const LineTouchData(enabled: false),
+                  lineBarsData: [
+                    LineChartBarData(
+                      color: coloriSerieGrafici[0],
+                      barWidth: 2,
+                      dotData: const FlDotData(show: false),
+                      spots: [
+                        for (var i = 0; i < ultimi24.length; i++)
+                          switch (ultimi24[i].totale) {
+                            final v? => FlSpot(i.toDouble(), v / 100),
+                            null => FlSpot.nullSpot,
+                          },
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
         ),
         Wrap(
