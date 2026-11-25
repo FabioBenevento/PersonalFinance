@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:personal_finance/auth/auth.dart';
 import 'package:personal_finance/data/broker_providers.dart';
 import 'package:personal_finance/data/voci_providers.dart';
+import 'package:personal_finance/domain/associazioni_broker.dart';
 import 'package:personal_finance/domain/broker.dart';
 import 'package:personal_finance/domain/voce.dart';
 import 'package:personal_finance/main.dart';
@@ -136,6 +137,7 @@ Future<void> apri(WidgetTester tester, FakeBrokerRepository repo) async {
 }
 
 void main() {
+  anteprimaTests();
   testWidgets('BRO-013 consultazione a 360 pixel con opzione short', (
     tester,
   ) async {
@@ -207,4 +209,101 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Liquidità IBKR'), findsNothing);
   });
+}
+
+final _rilEuro = RilevazioneBroker(
+  lettaIl: DateTime(2026, 11, 25),
+  conti: [
+    ContoBroker(
+      id: 'c1',
+      broker: 'IBKR',
+      nome: 'IBKR',
+      stato: StatoCollegamento.attivo,
+      datiIl: DateTime(2026, 11, 24),
+      liquidita: const [LiquiditaBroker(valuta: 'EUR', importo: '1234.50')],
+      posizioni: const [
+        PosizioneBroker(
+          id: 'p',
+          simbolo: 'AAPL',
+          descrizione: null,
+          tipo: TipoPosizione.azione,
+          valuta: 'USD',
+          quantita: '10',
+          prezzo: '200',
+          valore: '2000',
+          equivalenteLiquidita: false,
+        ),
+      ],
+    ),
+  ],
+);
+
+Future<FakeBrokerRepository> _apriAnteprima(WidgetTester tester) async {
+  final repo = FakeBrokerRepository(_rilEuro)
+    ..associazioni['c1'] = const AssociazioniConto(
+      revisione: 2,
+      liquidita: 'li',
+      investimenti: 'iv',
+    );
+  await apri(tester, repo);
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('Anteprima aggiornamento'));
+  await tester.pumpAndSettle();
+  return repo;
+}
+
+void anteprimaTests() {
+  testWidgets(
+    'SIT-BRO-001 anteprima con confronto, nessun saldo cambia; annullare non scrive',
+    (tester) async {
+      final repo = await _apriAnteprima(tester);
+      expect(tester.takeException(), isNull);
+      expect(find.text('Attuale € 0,00'), findsWidgets);
+      expect(find.text('Proposto € 1.234,50'), findsOneWidget);
+      expect(find.text('Differenza +€ 1.234,50'), findsOneWidget);
+      expect(find.text('Dati del 24/11/2026'), findsWidgets);
+      await tester.tap(find.text('Annulla'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Anteprima ·'), findsNothing);
+      expect(repo.associazioni['c1']!.revisione, 2);
+      await tester.tap(find.widgetWithText(TextButton, 'Situazione'));
+      await tester.pumpAndSettle();
+      expect(find.text('BBVA'), findsWidgets);
+      expect(find.textContaining('1.234,50'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'BRO-018 BRO-020 SIT-BRO-002 componente bloccata non selezionabile, valida sì',
+    (tester) async {
+      await _apriAnteprima(tester);
+      expect(
+        find.textContaining('Bloccata: Cambio USD mancante'),
+        findsOneWidget,
+      );
+      final caselle = tester
+          .widgetList<CheckboxListTile>(find.byType(CheckboxListTile))
+          .toList();
+      expect(caselle[0].onChanged, isNotNull);
+      expect(caselle[1].onChanged, isNull);
+      await tester.tap(find.byType(CheckboxListTile).last);
+      await tester.pump();
+      expect(
+        tester
+            .widgetList<CheckboxListTile>(find.byType(CheckboxListTile))
+            .last
+            .value,
+        isFalse,
+      );
+      await tester.tap(find.byType(CheckboxListTile).first);
+      await tester.pump();
+      expect(
+        tester
+            .widgetList<CheckboxListTile>(find.byType(CheckboxListTile))
+            .first
+            .value,
+        isTrue,
+      );
+    },
+  );
 }

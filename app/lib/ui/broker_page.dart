@@ -7,6 +7,7 @@ import '../domain/associazioni_broker.dart';
 import '../domain/broker.dart';
 import '../domain/voce.dart';
 import 'app_theme.dart';
+import 'broker_anteprima.dart';
 import 'patrimonio_layout.dart';
 
 class BrokerPage extends ConsumerWidget {
@@ -108,6 +109,13 @@ class _Conto extends ConsumerWidget {
               style: const TextStyle(color: coloreSecondario),
             ),
             for (final c in ComponenteBroker.values) _Associazione(conto.id, c),
+            TextButton(
+              onPressed: () => showDialog<void>(
+                context: context,
+                builder: (_) => AnteprimaBroker(conto),
+              ),
+              child: const Text('Anteprima aggiornamento'),
+            ),
             for (final l in conto.liquidita)
               Text('Liquidità ${l.importo ?? 'non disponibile'} ${l.valuta}'),
             if (conto.posizioni.isEmpty)
