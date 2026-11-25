@@ -91,3 +91,54 @@ for (const [caso, context, uid] of [
     await assertFails(setDoc(esistente, sostituzione));
   });
 }
+
+const broker = ['brokerStato/snaptrade', 'brokerRilevazioni/r1', 'brokerRilevazioni/r1/conti/c1', 'brokerRilevazioni/r1/posizioni/p1'];
+
+test('BRO-007 accesso ai dati broker solo al proprietario autorizzato', async () => {
+  await env.withSecurityRulesDisabled(async (c) => {
+    for (const uid of ['ok', 'intruso']) {
+      for (const p of [...broker, 'brokerAssociazioni/c1', 'brokerApplicazioni/o1']) {
+        await setDoc(doc(c.firestore(), `users/${uid}/${p}`), { x: 1 });
+      }
+    }
+  });
+  for (const p of [...broker, 'brokerAssociazioni/c1', 'brokerApplicazioni/o1']) {
+    await assertSucceeds(getDoc(doc(db('ok'), `users/ok/${p}`)));
+    await assertFails(getDoc(doc(db('ok'), `users/intruso/${p}`)));
+    await assertFails(getDoc(doc(db('intruso'), `users/intruso/${p}`)));
+    await assertFails(getDoc(doc(env.unauthenticatedContext().firestore(), `users/ok/${p}`)));
+  }
+});
+
+test('BRO-022 rilevazioni e puntatore non scrivibili dal client, voci e fotografie sì', async () => {
+  await env.withSecurityRulesDisabled(async (c) => {
+    for (const p of broker) await setDoc(doc(c.firestore(), `users/ok/${p}`), { x: 1 });
+  });
+  const d = db('ok');
+  for (const p of broker) {
+    await assertFails(setDoc(doc(d, `users/ok/${p}`), { x: 2 }));
+    await assertFails(setDoc(doc(d, `users/ok/${p}-nuovo`), { x: 2 }));
+    await assertFails(deleteDoc(doc(d, `users/ok/${p}`)));
+  }
+  await assertSucceeds(setDoc(doc(d, 'users/ok/voci/v1'), { nome: 'n', saldoCentesimi: 5 }));
+  await assertSucceeds(setDoc(doc(d, 'users/ok/fotografie/2026-11'), fotografia));
+});
+
+test('BRO-022 associazioni e ricevute: struttura valida, ricevute immutabili', async () => {
+  const d = db('ok');
+  const a = doc(d, 'users/ok/brokerAssociazioni/c1');
+  await assertSucceeds(setDoc(a, { revisione: 1, liquidita: 'v1', investimenti: 'v2' }));
+  await assertSucceeds(setDoc(a, { revisione: 2 }));
+  await assertFails(setDoc(a, { revisione: 0 }));
+  await assertFails(setDoc(a, { revisione: 'x' }));
+  await assertFails(setDoc(a, { revisione: 3, liquidita: 5 }));
+  await assertFails(setDoc(a, { revisione: 3, extra: 1 }));
+  await assertFails(setDoc(doc(db('ok'), 'users/altro/brokerAssociazioni/c1'), { revisione: 1 }));
+  const r = doc(d, 'users/ok/brokerApplicazioni/o1');
+  const ricevuta = { rilevazione: 'r1', applicataAt: 'ts', conti: { c1: 100 } };
+  await assertFails(setDoc(doc(d, 'users/ok/brokerApplicazioni/o2'), { rilevazione: 'r1' }));
+  await assertFails(setDoc(doc(d, 'users/ok/brokerApplicazioni/o2'), { ...ricevuta, token: 's' }));
+  await assertSucceeds(setDoc(r, ricevuta));
+  await assertFails(setDoc(r, ricevuta));
+  await assertFails(deleteDoc(r));
+});

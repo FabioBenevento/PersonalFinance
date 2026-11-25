@@ -13,8 +13,42 @@ service cloud.firestore {
 
     match /users/{uid} {
       allow read, write: if autorizzato(uid);
-      match /{document=**} {
-        allow read, write: if autorizzato(uid);
+
+      // Le collezioni broker sono escluse dal match generico: un allow sovrapposto le renderebbe scrivibili.
+      match /{coll}/{document=**} {
+        allow read, write: if autorizzato(uid)
+          && !(coll in ['brokerStato', 'brokerRilevazioni', 'brokerAssociazioni', 'brokerApplicazioni']);
+      }
+
+      match /brokerStato/{document=**} {
+        allow read: if autorizzato(uid);
+        allow write: if false;
+      }
+
+      match /brokerRilevazioni/{document=**} {
+        allow read: if autorizzato(uid);
+        allow write: if false;
+      }
+
+      match /brokerAssociazioni/{idConto} {
+        allow read: if autorizzato(uid);
+        allow create, update: if autorizzato(uid)
+          && request.resource.data.keys().hasOnly(['revisione', 'liquidita', 'investimenti'])
+          && request.resource.data.keys().hasAll(['revisione'])
+          && request.resource.data.revisione is int && request.resource.data.revisione >= 1
+          && (!('liquidita' in request.resource.data) || request.resource.data.liquidita is string)
+          && (!('investimenti' in request.resource.data) || request.resource.data.investimenti is string);
+        allow delete: if autorizzato(uid);
+      }
+
+      match /brokerApplicazioni/{idOperazione} {
+        allow read: if autorizzato(uid);
+        allow create: if autorizzato(uid)
+          && request.resource.data.keys().hasOnly(['rilevazione', 'applicataAt', 'conti'])
+          && request.resource.data.keys().hasAll(['rilevazione', 'applicataAt', 'conti'])
+          && request.resource.data.rilevazione is string
+          && request.resource.data.conti is map;
+        allow update, delete: if false;
       }
     }
   }
