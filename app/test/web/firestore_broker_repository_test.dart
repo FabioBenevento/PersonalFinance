@@ -36,10 +36,12 @@ void main() {
     expect(lette['ibkr']!.revisione, 1);
     expect(lette['ibkr']!.liquidita, 'liq');
     // Un secondo salvataggio con la stessa revisione base e un conflitto.
-    await expectLater(
-      repo.salvaAssociazioni('ibkr', a1),
-      throwsA(isA<ValidazioneException>()),
-    );
+    // Sul web l'errore della transazione arriva avvolto: conta l'effetto.
+    await expectLater(repo.salvaAssociazioni('ibkr', a1), throwsA(anything));
+    final attuale = await harness.firestore
+        .doc('users/${harness.uid}/brokerAssociazioni/ibkr')
+        .get(const GetOptions(source: Source.server));
+    expect(attuale.data()!['revisione'], 1);
     final a2 = associa(
       tutte: lette,
       contoId: 'ibkr',
@@ -55,11 +57,15 @@ void main() {
       ],
     );
     await repo.salvaAssociazioni('ibkr', a2);
-    final dopo = (await repo.osservaAssociazioni().first)['ibkr']!;
-    expect(
-      [dopo.revisione, dopo.liquidita, dopo.investimenti],
-      [2, 'liq', 'inv'],
-    );
+    // Le transazioni scrivono sul server: la cache puo essere indietro.
+    final dopo = await harness.firestore
+        .doc('users/${harness.uid}/brokerAssociazioni/ibkr')
+        .get(const GetOptions(source: Source.server));
+    expect(dopo.data(), {
+      'revisione': 2,
+      'liquidita': 'liq',
+      'investimenti': 'inv',
+    });
   });
 
   test('BRO-016 destinazione non valida: nessuna scrittura', () async {
