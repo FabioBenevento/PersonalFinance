@@ -5,11 +5,15 @@ const schemaBrokerSupportato = 1;
 
 /// Converte la rilevazione normalizzata annidata (stesso formato delle
 /// fixture condivise con il comando locale).
-RilevazioneBroker rilevazioneFromJson(Map<String, dynamic> json) {
+RilevazioneBroker rilevazioneFromJson(
+  Map<String, dynamic> json, {
+  String id = '',
+}) {
   if (json['schemaVersion'] != schemaBrokerSupportato) {
     throw const FormatException('Versione rilevazione broker non supportata');
   }
   return RilevazioneBroker(
+    id: id,
     lettaIl: DateTime.parse(json['lettaIl'] as String),
     conti: [
       for (final c in json['conti'] as List)
@@ -24,8 +28,9 @@ RilevazioneBroker rilevazioneFromJson(Map<String, dynamic> json) {
 RilevazioneBroker rilevazioneDaDocumenti(
   Map<String, dynamic> testata,
   List<Map<String, dynamic>> conti,
-  List<Map<String, dynamic>> posizioni,
-) {
+  List<Map<String, dynamic>> posizioni, {
+  String id = '',
+}) {
   final manifest = testata['manifest'];
   if (testata['completa'] != true ||
       manifest is! Map ||
@@ -33,7 +38,7 @@ RilevazioneBroker rilevazioneDaDocumenti(
       manifest['posizioni'] != posizioni.length) {
     throw const FormatException('Rilevazione broker incompleta');
   }
-  return rilevazioneFromJson({
+  return rilevazioneFromJson(id: id, {
     ...testata,
     'conti': [
       for (final c in conti)

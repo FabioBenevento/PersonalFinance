@@ -67,14 +67,15 @@ class _Rilevazione extends StatelessWidget {
           padding: EdgeInsets.only(top: 16),
           child: Text('Nessun conto nella rilevazione'),
         ),
-      for (final c in rilevazione.conti) _Conto(c),
+      for (final c in rilevazione.conti) _Conto(c, rilevazione.id),
     ],
   );
 }
 
 class _Conto extends ConsumerWidget {
-  const _Conto(this.conto);
+  const _Conto(this.conto, this.rilevazioneId);
   final ContoBroker conto;
+  final String rilevazioneId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) => Padding(
@@ -112,7 +113,7 @@ class _Conto extends ConsumerWidget {
             TextButton(
               onPressed: () => showDialog<void>(
                 context: context,
-                builder: (_) => AnteprimaBroker(conto),
+                builder: (_) => AnteprimaBroker(conto, rilevazioneId),
               ),
               child: const Text('Anteprima aggiornamento'),
             ),

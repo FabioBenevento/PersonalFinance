@@ -89,7 +89,14 @@ class ContoBroker {
 }
 
 class RilevazioneBroker {
-  const RilevazioneBroker({required this.lettaIl, required this.conti});
+  const RilevazioneBroker({
+    required this.lettaIl,
+    required this.conti,
+    this.id = '',
+  });
+
+  /// Id della generazione attiva letta; vuoto nelle fixture senza origine.
+  final String id;
   final DateTime lettaIl;
   final List<ContoBroker> conti;
 }

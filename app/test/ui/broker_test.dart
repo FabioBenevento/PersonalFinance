@@ -8,6 +8,7 @@ import 'package:personal_finance/data/broker_providers.dart';
 import 'package:personal_finance/data/voci_providers.dart';
 import 'package:personal_finance/domain/associazioni_broker.dart';
 import 'package:personal_finance/domain/broker.dart';
+import 'package:personal_finance/domain/conferma_broker.dart';
 import 'package:personal_finance/domain/voce.dart';
 import 'package:personal_finance/main.dart';
 
@@ -212,6 +213,7 @@ void main() {
 }
 
 final _rilEuro = RilevazioneBroker(
+  id: 'g1',
   lettaIl: DateTime(2026, 11, 25),
   conti: [
     ContoBroker(
@@ -306,4 +308,63 @@ void anteprimaTests() {
       );
     },
   );
+
+  testWidgets('SIT-BRO-002 conferma solo le componenti selezionate', (
+    tester,
+  ) async {
+    final repo = await _apriAnteprima(tester);
+    expect(
+      tester
+          .widget<TextButton>(find.widgetWithText(TextButton, 'Conferma'))
+          .onPressed,
+      isNull,
+    );
+    await tester.tap(find.byType(CheckboxListTile).first);
+    await tester.pump();
+    await tester.tap(find.widgetWithText(TextButton, 'Conferma'));
+    await tester.pumpAndSettle();
+    final c = repo.conferme.single;
+    expect(c.rilevazioneId, 'g1');
+    expect(c.associazioni['c1']!.revisione, 2);
+    expect(c.saldi.single.voce.id, 'li');
+    expect(c.saldi.single.proposto, 123450);
+    expect(find.textContaining('Anteprima ·'), findsNothing);
+    expect(find.text('Saldi aggiornati'), findsOneWidget);
+  });
+
+  testWidgets('SIT-BRO-003 conflitto: avviso, nessun ricalcolo ne reinvio', (
+    tester,
+  ) async {
+    final repo = await _apriAnteprima(tester)
+      ..erroreConferma = const ConflittoConfermaException('x');
+    await tester.tap(find.byType(CheckboxListTile).first);
+    await tester.pump();
+    await tester.tap(find.widgetWithText(TextButton, 'Conferma'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('nuova anteprima'), findsOneWidget);
+    expect(find.text('Proposto € 1.234,50'), findsOneWidget);
+    expect(
+      tester
+          .widget<TextButton>(find.widgetWithText(TextButton, 'Conferma'))
+          .onPressed,
+      isNull,
+    );
+    expect(repo.conferme, isEmpty);
+  });
+
+  testWidgets('SIT-BRO-005 offline: errore e riprova, nulla accodato', (
+    tester,
+  ) async {
+    final repo = await _apriAnteprima(tester)
+      ..erroreConferma = StateError('offline');
+    await tester.tap(find.byType(CheckboxListTile).first);
+    await tester.pump();
+    await tester.tap(find.widgetWithText(TextButton, 'Conferma'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('serve la connessione'), findsOneWidget);
+    repo.erroreConferma = null;
+    await tester.tap(find.widgetWithText(TextButton, 'Conferma'));
+    await tester.pumpAndSettle();
+    expect(repo.conferme, hasLength(1));
+  });
 }

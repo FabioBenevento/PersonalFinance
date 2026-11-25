@@ -5,6 +5,7 @@ import '../data/broker_providers.dart';
 import '../data/voci_providers.dart';
 import '../domain/associazioni_broker.dart';
 import '../domain/broker.dart';
+import '../domain/conferma_broker.dart';
 import '../domain/importo.dart';
 import '../domain/proposta_broker.dart';
 import '../domain/voce.dart';
@@ -16,10 +17,11 @@ String _giorno(DateTime d) =>
 String _differenza(int c) => '${c < 0 ? '-' : '+'}${scriviImporto(c.abs())}';
 
 /// Anteprima del confronto fra saldi attuali e proposti di un conto: non
-/// scrive nulla; la conferma dei saldi selezionati arriva con il task 4.1.
+/// scrive nulla finche l'utente non conferma i saldi selezionati.
 class AnteprimaBroker extends ConsumerStatefulWidget {
-  const AnteprimaBroker(this.conto, {super.key});
+  const AnteprimaBroker(this.conto, this.rilevazioneId, {super.key});
   final ContoBroker conto;
+  final String rilevazioneId;
 
   @override
   ConsumerState<AnteprimaBroker> createState() => _AnteprimaBrokerState();
@@ -27,6 +29,11 @@ class AnteprimaBroker extends ConsumerStatefulWidget {
 
 class _AnteprimaBrokerState extends ConsumerState<AnteprimaBroker> {
   final _selezionate = <ComponenteBroker>{};
+  // Una sola operazione per anteprima: un doppio invio non applica due volte.
+  late final _operazioneId = ref.read(vociRepositoryProvider).nuovoId();
+  var _inCorso = false;
+  String? _errore;
+  var _conflitto = false;
 
   @override
   Widget build(BuildContext context) {
@@ -52,6 +59,8 @@ class _AnteprimaBrokerState extends ConsumerState<AnteprimaBroker> {
             for (final c in ComponenteBroker.values)
               if (assoc.destinazione(c) case final id?)
                 _riga(c, voci.where((v) => v.id == id).firstOrNull, proposta),
+            if (_errore != null)
+              Text(_errore!, style: const TextStyle(color: coloreNegativo)),
           ],
         ),
       ),
@@ -60,8 +69,69 @@ class _AnteprimaBrokerState extends ConsumerState<AnteprimaBroker> {
           onPressed: () => Navigator.pop(context),
           child: const Text('Annulla'),
         ),
+        TextButton(
+          onPressed: _selezionate.isEmpty || _inCorso || _conflitto
+              ? null
+              : () => _conferma(assoc, voci, proposta),
+          child: const Text('Conferma'),
+        ),
       ],
     );
+  }
+
+  Future<void> _conferma(
+    AssociazioniConto assoc,
+    List<Voce> voci,
+    PropostaConto proposta,
+  ) async {
+    final conto = widget.conto;
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+    setState(() {
+      _inCorso = true;
+      _errore = null;
+    });
+    try {
+      await ref
+          .read(brokerRepositoryProvider)
+          .confermaSaldi(
+            ConfermaBroker(
+              operazioneId: _operazioneId,
+              rilevazioneId: widget.rilevazioneId,
+              associazioni: {conto.id: assoc},
+              saldi: [
+                for (final c in ComponenteBroker.values)
+                  if (_selezionate.contains(c))
+                    SaldoDaConfermare(
+                      contoId: conto.id,
+                      componente: c,
+                      voce: voci.firstWhere(
+                        (v) => v.id == assoc.destinazione(c),
+                      ),
+                      proposto: proposta.di(c).centesimi!,
+                    ),
+              ],
+            ),
+          );
+      navigator.pop();
+      messenger.showSnackBar(const SnackBar(content: Text('Saldi aggiornati')));
+    } on ConflittoConfermaException {
+      // Nessun ricalcolo: l'utente deve rivedere una nuova anteprima.
+      if (mounted) {
+        setState(() {
+          _inCorso = false;
+          _conflitto = true;
+          _errore = 'I dati sono cambiati: nessun saldo aggiornato. Chiudi e apri una nuova anteprima.';
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _inCorso = false;
+          _errore = 'Conferma non riuscita: serve la connessione. Riprova.';
+        });
+      }
+    }
   }
 
   Widget _riga(ComponenteBroker c, Voce? voce, PropostaConto proposta) {
@@ -90,7 +160,7 @@ class _AnteprimaBrokerState extends ConsumerState<AnteprimaBroker> {
       contentPadding: EdgeInsets.zero,
       controlAffinity: ListTileControlAffinity.leading,
       value: _selezionate.contains(c),
-      onChanged: ammessa
+      onChanged: ammessa && !_conflitto
           ? (v) => setState(() {
               v == true ? _selezionate.add(c) : _selezionate.remove(c);
             })

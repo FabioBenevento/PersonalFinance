@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:personal_finance/data/broker_repository.dart';
 import 'package:personal_finance/domain/associazioni_broker.dart';
 import 'package:personal_finance/domain/broker.dart';
+import 'package:personal_finance/domain/conferma_broker.dart';
 import 'package:personal_finance/domain/voce.dart';
 
 class FakeBrokerRepository implements BrokerRepository {
@@ -36,5 +37,15 @@ class FakeBrokerRepository implements BrokerRepository {
     }
     associazioni[contoId] = nuove;
     _cambi.add(null);
+  }
+
+  /// Conferme ricevute; [erroreConferma] le fa fallire.
+  final conferme = <ConfermaBroker>[];
+  Object? erroreConferma;
+
+  @override
+  Future<void> confermaSaldi(ConfermaBroker conferma) async {
+    if (erroreConferma != null) throw erroreConferma!;
+    conferme.add(conferma);
   }
 }

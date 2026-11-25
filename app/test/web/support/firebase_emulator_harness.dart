@@ -92,6 +92,13 @@ class FirebaseEmulatorHarness {
     {'fields': campi},
   );
 
+  /// Admin write (bypassing rules) of REST [campi] at [percorso], to seed the
+  /// collections the client may not write, such as the broker generations.
+  Future<void> scriviRemoto(String percorso, Map<String, Object?> campi) =>
+      _fixture(percorso, 'PATCH', {'fields': campi});
+
+  Future<void> eliminaRemoto(String percorso) => _fixture(percorso, 'DELETE');
+
   Future<void> close() async {
     await _fixture('users/$uid/voci/b', 'DELETE');
     await _fixture('users/$uid/fotografie/2026-11', 'DELETE');
